@@ -236,6 +236,48 @@ if (clients.lidarr) {
         properties: {},
         required: [],
       },
+    },
+    {
+      name: "lidarr_get_albums",
+      description: "Get albums for an artist in Lidarr. Shows which albums are available and which are missing.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          artistId: {
+            type: "number",
+            description: "Artist ID to get albums for",
+          },
+        },
+        required: ["artistId"],
+      },
+    },
+    {
+      name: "lidarr_search_album",
+      description: "Trigger a search for a specific album to download",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          albumId: {
+            type: "number",
+            description: "Album ID to search for",
+          },
+        },
+        required: ["albumId"],
+      },
+    },
+    {
+      name: "lidarr_search_missing",
+      description: "Trigger a search for all missing albums for an artist",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          artistId: {
+            type: "number",
+            description: "Artist ID to search missing albums for",
+          },
+        },
+        required: ["artistId"],
+      },
     }
   );
 }
@@ -589,6 +631,63 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 timeLeft: q.timeleft,
                 downloadClient: q.downloadClient,
               })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_get_albums": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const artistId = (args as { artistId: number }).artistId;
+        const albums = await clients.lidarr.getAlbums(artistId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: albums.length,
+              albums: albums.map(a => ({
+                id: a.id,
+                title: a.title,
+                releaseDate: a.releaseDate,
+                albumType: a.albumType,
+                monitored: a.monitored,
+                tracks: a.statistics ? `${a.statistics.trackFileCount}/${a.statistics.totalTrackCount}` : 'unknown',
+                sizeOnDisk: formatBytes(a.statistics?.sizeOnDisk || 0),
+                percentComplete: a.statistics?.percentOfTracks || 0,
+                grabbed: a.grabbed,
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_search_album": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const albumId = (args as { albumId: number }).albumId;
+        const result = await clients.lidarr.searchAlbum(albumId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Search triggered for album`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_search_missing": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const artistId = (args as { artistId: number }).artistId;
+        const result = await clients.lidarr.searchMissingAlbums(artistId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Search triggered for missing albums`,
+              commandId: result.id,
             }, null, 2),
           }],
         };

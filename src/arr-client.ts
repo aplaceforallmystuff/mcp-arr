@@ -125,6 +125,42 @@ export interface Movie {
   };
 }
 
+export interface Album {
+  id: number;
+  title: string;
+  disambiguation: string;
+  overview: string;
+  artistId: number;
+  foreignAlbumId: string;
+  monitored: boolean;
+  anyReleaseOk: boolean;
+  profileId: number;
+  duration: number;
+  albumType: string;
+  genres: string[];
+  images: Array<{ coverType: string; url: string }>;
+  links: Array<{ url: string; name: string }>;
+  statistics?: {
+    trackFileCount: number;
+    trackCount: number;
+    totalTrackCount: number;
+    sizeOnDisk: number;
+    percentOfTracks: number;
+  };
+  releaseDate: string;
+  releases: Array<{
+    id: number;
+    albumId: number;
+    foreignReleaseId: string;
+    title: string;
+    status: string;
+    duration: number;
+    trackCount: number;
+    monitored: boolean;
+  }>;
+  grabbed: boolean;
+}
+
 export interface Artist {
   id: number;
   artistName: string;
@@ -457,6 +493,47 @@ export class LidarrClient extends ArrClient {
         addOptions: {
           searchForMissingAlbums: true,
         },
+      }),
+    });
+  }
+
+  /**
+   * Get all albums, optionally filtered by artist
+   */
+  async getAlbums(artistId?: number): Promise<Album[]> {
+    const url = artistId ? `/album?artistId=${artistId}` : '/album';
+    return this['request']<Album[]>(url);
+  }
+
+  /**
+   * Get a specific album
+   */
+  async getAlbumById(id: number): Promise<Album> {
+    return this['request']<Album>(`/album/${id}`);
+  }
+
+  /**
+   * Search for missing albums for an artist
+   */
+  async searchMissingAlbums(artistId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'ArtistSearch',
+        artistId,
+      }),
+    });
+  }
+
+  /**
+   * Search for a specific album
+   */
+  async searchAlbum(albumId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'AlbumSearch',
+        albumIds: [albumId],
       }),
     });
   }
