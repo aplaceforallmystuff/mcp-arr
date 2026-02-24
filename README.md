@@ -136,10 +136,12 @@ Add to `~/.claude.json`:
 - "List all artists in my music library"
 - "How many books do I have by this author?"
 
-### Searching for Content
+### Searching & Adding Content
 - "Search for sci-fi shows on Sonarr"
 - "Find action movies from the 90s"
-- "Search for jazz albums"
+- "Add Severance to my TV library"
+- "Add The Menu to Radarr"
+- "Search for jazz albums and add Miles Davis"
 - "Look up fantasy book series"
 
 ### Download Queue
