@@ -191,7 +191,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_search",
-      description: "Search for TV series to add to Sonarr",
+      description: "Search for TV series by name. Returns results with tvdbId needed for sonarr_add_series.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -272,6 +272,58 @@ if (clients.sonarr) {
         },
         required: ["episodeIds"],
       },
+    },
+    {
+      name: "sonarr_add_series",
+      description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          tvdbId: {
+            type: "number",
+            description: "TVDB ID from sonarr_search results",
+          },
+          title: {
+            type: "string",
+            description: "Series title",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "Quality profile ID from sonarr_get_quality_profiles",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "Root folder path from sonarr_get_root_folders",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the series (default: true)",
+          },
+          seasonFolder: {
+            type: "boolean",
+            description: "Whether to use season folders (default: true)",
+          },
+        },
+        required: ["tvdbId", "title", "qualityProfileId", "rootFolderPath"],
+      },
+    },
+    {
+      name: "sonarr_get_root_folders",
+      description: "Get available root folders for Sonarr. Use this to find valid rootFolderPath values when adding a series.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "sonarr_get_quality_profiles",
+      description: "Get available quality profiles for Sonarr. Use this to find valid qualityProfileId values when adding a series.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
     }
   );
 }
@@ -290,7 +342,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_search",
-      description: "Search for movies to add to Radarr",
+      description: "Search for movies by name. Returns results with tmdbId needed for radarr_add_movie.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -338,6 +390,59 @@ if (clients.radarr) {
         },
         required: ["movieId"],
       },
+    },
+    {
+      name: "radarr_add_movie",
+      description: "Add a movie to Radarr. Use radarr_search first to find the tmdbId, and radarr_get_root_folders / radarr_get_quality_profiles to get valid values.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          tmdbId: {
+            type: "number",
+            description: "TMDB ID from radarr_search results",
+          },
+          title: {
+            type: "string",
+            description: "Movie title",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "Quality profile ID from radarr_get_quality_profiles",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "Root folder path from radarr_get_root_folders",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the movie (default: true)",
+          },
+          minimumAvailability: {
+            type: "string",
+            enum: ["announced", "inCinemas", "released", "tba"],
+            description: "When to consider the movie available (default: announced)",
+          },
+        },
+        required: ["tmdbId", "title", "qualityProfileId", "rootFolderPath"],
+      },
+    },
+    {
+      name: "radarr_get_root_folders",
+      description: "Get available root folders for Radarr. Use this to find valid rootFolderPath values when adding a movie.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "radarr_get_quality_profiles",
+      description: "Get available quality profiles for Radarr. Use this to find valid qualityProfileId values when adding a movie.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
     }
   );
 }
@@ -356,7 +461,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_search",
-      description: "Search for artists to add to Lidarr",
+      description: "Search for artists by name. Returns results with foreignArtistId needed for lidarr_add_artist.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -432,6 +537,67 @@ if (clients.lidarr) {
         },
         required: [],
       },
+    },
+    {
+      name: "lidarr_add_artist",
+      description: "Add an artist to Lidarr. Use lidarr_search first to find the foreignArtistId, and lidarr_get_root_folders / lidarr_get_quality_profiles / lidarr_get_metadata_profiles to get valid values.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          foreignArtistId: {
+            type: "string",
+            description: "Foreign artist ID (MusicBrainz ID) from lidarr_search results",
+          },
+          artistName: {
+            type: "string",
+            description: "Artist name",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "Quality profile ID from lidarr_get_quality_profiles",
+          },
+          metadataProfileId: {
+            type: "number",
+            description: "Metadata profile ID from lidarr_get_metadata_profiles",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "Root folder path from lidarr_get_root_folders",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the artist (default: true)",
+          },
+        },
+        required: ["foreignArtistId", "artistName", "qualityProfileId", "metadataProfileId", "rootFolderPath"],
+      },
+    },
+    {
+      name: "lidarr_get_root_folders",
+      description: "Get available root folders for Lidarr. Use this to find valid rootFolderPath values when adding an artist.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "lidarr_get_quality_profiles",
+      description: "Get available quality profiles for Lidarr. Use this to find valid qualityProfileId values when adding an artist.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "lidarr_get_metadata_profiles",
+      description: "Get available metadata profiles for Lidarr. Use this to find valid metadataProfileId values when adding an artist.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
     }
   );
 }
@@ -450,7 +616,7 @@ if (clients.readarr) {
     },
     {
       name: "readarr_search",
-      description: "Search for authors to add to Readarr",
+      description: "Search for authors by name. Returns results with foreignAuthorId needed for readarr_add_author.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -525,6 +691,67 @@ if (clients.readarr) {
             description: "Number of days to look ahead (default: 30)",
           },
         },
+        required: [],
+      },
+    },
+    {
+      name: "readarr_add_author",
+      description: "Add an author to Readarr. Use readarr_search first to find the foreignAuthorId, and readarr_get_root_folders / readarr_get_quality_profiles / readarr_get_metadata_profiles to get valid values.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          foreignAuthorId: {
+            type: "string",
+            description: "Foreign author ID from readarr_search results",
+          },
+          authorName: {
+            type: "string",
+            description: "Author name",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "Quality profile ID from readarr_get_quality_profiles",
+          },
+          metadataProfileId: {
+            type: "number",
+            description: "Metadata profile ID from readarr_get_metadata_profiles",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "Root folder path from readarr_get_root_folders",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the author (default: true)",
+          },
+        },
+        required: ["foreignAuthorId", "authorName", "qualityProfileId", "metadataProfileId", "rootFolderPath"],
+      },
+    },
+    {
+      name: "readarr_get_root_folders",
+      description: "Get available root folders for Readarr. Use this to find valid rootFolderPath values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "readarr_get_quality_profiles",
+      description: "Get available quality profiles for Readarr. Use this to find valid qualityProfileId values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "readarr_get_metadata_profiles",
+      description: "Get available metadata profiles for Readarr. Use this to find valid metadataProfileId values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
         required: [],
       },
     }
@@ -1184,6 +1411,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "sonarr_add_series": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder } = args as {
+          tvdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
+          monitored?: boolean; seasonFolder?: boolean;
+        };
+        const added = await clients.sonarr.addSeries({
+          tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Added "${added.title}" (${added.year}) to Sonarr`,
+              id: added.id,
+              path: added.path,
+              monitored: added.monitored,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "sonarr_get_root_folders": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const folders = await clients.sonarr.getRootFolders();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(folders, null, 2),
+          }],
+        };
+      }
+
+      case "sonarr_get_quality_profiles": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const profiles = await clients.sonarr.getQualityProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
       // Radarr handlers
       case "radarr_get_movies": {
         if (!clients.radarr) throw new Error("Radarr not configured");
@@ -1272,6 +1544,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               message: `Search triggered for movie`,
               commandId: result.id,
             }, null, 2),
+          }],
+        };
+      }
+
+      case "radarr_add_movie": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const { tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability } = args as {
+          tmdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
+          monitored?: boolean; minimumAvailability?: string;
+        };
+        const added = await clients.radarr.addMovie({
+          tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Added "${added.title}" (${added.year}) to Radarr`,
+              id: added.id,
+              path: added.path,
+              monitored: added.monitored,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "radarr_get_root_folders": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const folders = await clients.radarr.getRootFolders();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(folders, null, 2),
+          }],
+        };
+      }
+
+      case "radarr_get_quality_profiles": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const profiles = await clients.radarr.getQualityProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
           }],
         };
       }
@@ -1419,6 +1736,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "lidarr_add_artist": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const { foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored } = args as {
+          foreignArtistId: string; artistName: string; qualityProfileId: number;
+          metadataProfileId: number; rootFolderPath: string; monitored?: boolean;
+        };
+        const added = await clients.lidarr.addArtist({
+          foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Added "${added.artistName}" to Lidarr`,
+              id: added.id,
+              path: added.path,
+              monitored: added.monitored,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_get_root_folders": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const folders = await clients.lidarr.getRootFolders();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(folders, null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_get_quality_profiles": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const profiles = await clients.lidarr.getQualityProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
+      case "lidarr_get_metadata_profiles": {
+        if (!clients.lidarr) throw new Error("Lidarr not configured");
+        const profiles = await clients.lidarr.getMetadataProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
       // Readarr handlers
       case "readarr_get_authors": {
         if (!clients.readarr) throw new Error("Readarr not configured");
@@ -1555,6 +1928,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 monitored: b.monitored,
               })),
             }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_add_author": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const { foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored } = args as {
+          foreignAuthorId: string; authorName: string; qualityProfileId: number;
+          metadataProfileId: number; rootFolderPath: string; monitored?: boolean;
+        };
+        const added = await clients.readarr.addAuthor({
+          foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Added "${added.authorName}" to Readarr`,
+              id: added.id,
+              path: added.path,
+              monitored: added.monitored,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_root_folders": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const folders = await clients.readarr.getRootFolders();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(folders, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_quality_profiles": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const profiles = await clients.readarr.getQualityProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_metadata_profiles": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const profiles = await clients.readarr.getMetadataProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
           }],
         };
       }

@@ -192,7 +192,10 @@ Add to `~/.claude.json`:
 | Tool | Description |
 |------|-------------|
 | `sonarr_get_series` | List all TV series in your library |
-| `sonarr_search` | Search for TV series to add |
+| `sonarr_search` | Search for TV series by name (returns tvdbId for adding) |
+| `sonarr_add_series` | Add a TV series to Sonarr |
+| `sonarr_get_root_folders` | Get available root folders for adding series |
+| `sonarr_get_quality_profiles` | Get available quality profiles for adding series |
 | `sonarr_get_queue` | View current download queue |
 | `sonarr_get_calendar` | See upcoming episodes |
 | `sonarr_get_episodes` | List episodes for a series (shows missing vs available) |
@@ -204,7 +207,10 @@ Add to `~/.claude.json`:
 | Tool | Description |
 |------|-------------|
 | `radarr_get_movies` | List all movies in your library |
-| `radarr_search` | Search for movies to add |
+| `radarr_search` | Search for movies by name (returns tmdbId for adding) |
+| `radarr_add_movie` | Add a movie to Radarr |
+| `radarr_get_root_folders` | Get available root folders for adding movies |
+| `radarr_get_quality_profiles` | Get available quality profiles for adding movies |
 | `radarr_get_queue` | View current download queue |
 | `radarr_get_calendar` | See upcoming releases |
 | `radarr_search_movie` | Trigger search to download a movie in your library |
@@ -214,7 +220,11 @@ Add to `~/.claude.json`:
 | Tool | Description |
 |------|-------------|
 | `lidarr_get_artists` | List all artists in your library |
-| `lidarr_search` | Search for artists to add |
+| `lidarr_search` | Search for artists by name (returns foreignArtistId for adding) |
+| `lidarr_add_artist` | Add an artist to Lidarr |
+| `lidarr_get_root_folders` | Get available root folders for adding artists |
+| `lidarr_get_quality_profiles` | Get available quality profiles for adding artists |
+| `lidarr_get_metadata_profiles` | Get available metadata profiles for adding artists |
 | `lidarr_get_queue` | View current download queue |
 | `lidarr_get_albums` | List albums for an artist (shows missing vs available) |
 | `lidarr_search_album` | Trigger search for a specific album |
@@ -226,7 +236,11 @@ Add to `~/.claude.json`:
 | Tool | Description |
 |------|-------------|
 | `readarr_get_authors` | List all authors in your library |
-| `readarr_search` | Search for authors to add |
+| `readarr_search` | Search for authors by name (returns foreignAuthorId for adding) |
+| `readarr_add_author` | Add an author to Readarr |
+| `readarr_get_root_folders` | Get available root folders for adding authors |
+| `readarr_get_quality_profiles` | Get available quality profiles for adding authors |
+| `readarr_get_metadata_profiles` | Get available metadata profiles for adding authors |
 | `readarr_get_queue` | View current download queue |
 | `readarr_get_books` | List books for an author (shows missing vs available) |
 | `readarr_search_book` | Trigger search for specific book(s) |

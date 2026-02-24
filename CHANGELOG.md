@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `sonarr_add_series` - Add TV series to Sonarr library
+- `radarr_add_movie` - Add movies to Radarr library
+- `lidarr_add_artist` - Add artists to Lidarr library
+- `readarr_add_author` - Add authors to Readarr library
+- Helper tools for each service: `*_get_root_folders`, `*_get_quality_profiles`
+- `lidarr_get_metadata_profiles` and `readarr_get_metadata_profiles` helpers
+
+### Changed
+- Search tool descriptions now reference the add workflow (e.g., "returns tvdbId needed for sonarr_add_series")
+
 ## [1.4.1] - 2026-01-13
 
 ### Changed
