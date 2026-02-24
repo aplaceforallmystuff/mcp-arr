@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-02-25
+
 ### Added
 - `sonarr_add_series` - Add TV series to Sonarr library
 - `radarr_add_movie` - Add movies to Radarr library
@@ -17,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Search tool descriptions now reference the add workflow (e.g., "returns tvdbId needed for sonarr_add_series")
+
+### Fixed
+- Dependency vulnerabilities in @modelcontextprotocol/sdk, ajv, hono, and qs
 
 ## [1.4.1] - 2026-01-13
 
