@@ -275,7 +275,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_add_series",
-      description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId.",
+      description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -302,6 +302,11 @@ if (clients.sonarr) {
           seasonFolder: {
             type: "boolean",
             description: "Whether to use season folders (default: true)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of tag IDs from sonarr_get_tags (optional)",
           },
         },
         required: ["tvdbId", "title", "qualityProfileId", "rootFolderPath"],
@@ -393,7 +398,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_add_movie",
-      description: "Add a movie to Radarr. Use radarr_search first to find the tmdbId, and radarr_get_root_folders / radarr_get_quality_profiles to get valid values.",
+      description: "Add a movie to Radarr. Use radarr_search first to find the tmdbId, and radarr_get_root_folders / radarr_get_quality_profiles to get valid values. Use radarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -421,6 +426,11 @@ if (clients.radarr) {
             type: "string",
             enum: ["announced", "inCinemas", "released", "tba"],
             description: "When to consider the movie available (default: announced)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of tag IDs from radarr_get_tags (optional)",
           },
         },
         required: ["tmdbId", "title", "qualityProfileId", "rootFolderPath"],
@@ -540,7 +550,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_add_artist",
-      description: "Add an artist to Lidarr. Use lidarr_search first to find the foreignArtistId, and lidarr_get_root_folders / lidarr_get_quality_profiles / lidarr_get_metadata_profiles to get valid values.",
+      description: "Add an artist to Lidarr. Use lidarr_search first to find the foreignArtistId, and lidarr_get_root_folders / lidarr_get_quality_profiles / lidarr_get_metadata_profiles to get valid values. Use lidarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -567,6 +577,11 @@ if (clients.lidarr) {
           monitored: {
             type: "boolean",
             description: "Whether to monitor the artist (default: true)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of tag IDs from lidarr_get_tags (optional)",
           },
         },
         required: ["foreignArtistId", "artistName", "qualityProfileId", "metadataProfileId", "rootFolderPath"],
@@ -696,7 +711,7 @@ if (clients.readarr) {
     },
     {
       name: "readarr_add_author",
-      description: "Add an author to Readarr. Use readarr_search first to find the foreignAuthorId, and readarr_get_root_folders / readarr_get_quality_profiles / readarr_get_metadata_profiles to get valid values.",
+      description: "Add an author to Readarr. Use readarr_search first to find the foreignAuthorId, and readarr_get_root_folders / readarr_get_quality_profiles / readarr_get_metadata_profiles to get valid values. Use readarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -723,6 +738,11 @@ if (clients.readarr) {
           monitored: {
             type: "boolean",
             description: "Whether to monitor the author (default: true)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of tag IDs from readarr_get_tags (optional)",
           },
         },
         required: ["foreignAuthorId", "authorName", "qualityProfileId", "metadataProfileId", "rootFolderPath"],
@@ -1413,12 +1433,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "sonarr_add_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder } = args as {
+        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
           tvdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
-          monitored?: boolean; seasonFolder?: boolean;
+          monitored?: boolean; seasonFolder?: boolean; tags?: number[];
         };
         const added = await clients.sonarr.addSeries({
-          tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder,
+          tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags: tags ?? [],
         });
         return {
           content: [{
@@ -1550,12 +1570,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "radarr_add_movie": {
         if (!clients.radarr) throw new Error("Radarr not configured");
-        const { tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability } = args as {
+        const { tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability, tags } = args as {
           tmdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
-          monitored?: boolean; minimumAvailability?: string;
+          monitored?: boolean; minimumAvailability?: string; tags?: number[];
         };
         const added = await clients.radarr.addMovie({
-          tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability,
+          tmdbId, title, qualityProfileId, rootFolderPath, monitored, minimumAvailability, tags: tags ?? [],
         });
         return {
           content: [{
@@ -1738,12 +1758,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "lidarr_add_artist": {
         if (!clients.lidarr) throw new Error("Lidarr not configured");
-        const { foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored } = args as {
+        const { foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags } = args as {
           foreignArtistId: string; artistName: string; qualityProfileId: number;
-          metadataProfileId: number; rootFolderPath: string; monitored?: boolean;
+          metadataProfileId: number; rootFolderPath: string; monitored?: boolean; tags?: number[];
         };
         const added = await clients.lidarr.addArtist({
-          foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored,
+          foreignArtistId, artistName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags: tags ?? [],
         });
         return {
           content: [{
@@ -1934,12 +1954,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "readarr_add_author": {
         if (!clients.readarr) throw new Error("Readarr not configured");
-        const { foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored } = args as {
+        const { foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags } = args as {
           foreignAuthorId: string; authorName: string; qualityProfileId: number;
-          metadataProfileId: number; rootFolderPath: string; monitored?: boolean;
+          metadataProfileId: number; rootFolderPath: string; monitored?: boolean; tags?: number[];
         };
         const added = await clients.readarr.addAuthor({
-          foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored,
+          foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags: tags ?? [],
         });
         return {
           content: [{

@@ -143,6 +143,8 @@ Add to `~/.claude.json`:
 - "Add The Menu to Radarr"
 - "Search for jazz albums and add Miles Davis"
 - "Look up fantasy book series"
+- "Add this movie with my '4k' tag"
+- "What tags do I have in Sonarr?"
 
 ### Download Queue
 - "What's downloading right now?"
@@ -195,7 +197,7 @@ Add to `~/.claude.json`:
 |------|-------------|
 | `sonarr_get_series` | List all TV series in your library |
 | `sonarr_search` | Search for TV series by name (returns tvdbId for adding) |
-| `sonarr_add_series` | Add a TV series to Sonarr |
+| `sonarr_add_series` | Add a TV series to Sonarr (supports tags) |
 | `sonarr_get_root_folders` | Get available root folders for adding series |
 | `sonarr_get_quality_profiles` | Get available quality profiles for adding series |
 | `sonarr_get_queue` | View current download queue |
@@ -210,7 +212,7 @@ Add to `~/.claude.json`:
 |------|-------------|
 | `radarr_get_movies` | List all movies in your library |
 | `radarr_search` | Search for movies by name (returns tmdbId for adding) |
-| `radarr_add_movie` | Add a movie to Radarr |
+| `radarr_add_movie` | Add a movie to Radarr (supports tags) |
 | `radarr_get_root_folders` | Get available root folders for adding movies |
 | `radarr_get_quality_profiles` | Get available quality profiles for adding movies |
 | `radarr_get_queue` | View current download queue |
@@ -223,7 +225,7 @@ Add to `~/.claude.json`:
 |------|-------------|
 | `lidarr_get_artists` | List all artists in your library |
 | `lidarr_search` | Search for artists by name (returns foreignArtistId for adding) |
-| `lidarr_add_artist` | Add an artist to Lidarr |
+| `lidarr_add_artist` | Add an artist to Lidarr (supports tags) |
 | `lidarr_get_root_folders` | Get available root folders for adding artists |
 | `lidarr_get_quality_profiles` | Get available quality profiles for adding artists |
 | `lidarr_get_metadata_profiles` | Get available metadata profiles for adding artists |
@@ -239,7 +241,7 @@ Add to `~/.claude.json`:
 |------|-------------|
 | `readarr_get_authors` | List all authors in your library |
 | `readarr_search` | Search for authors by name (returns foreignAuthorId for adding) |
-| `readarr_add_author` | Add an author to Readarr |
+| `readarr_add_author` | Add an author to Readarr (supports tags) |
 | `readarr_get_root_folders` | Get available root folders for adding authors |
 | `readarr_get_quality_profiles` | Get available quality profiles for adding authors |
 | `readarr_get_metadata_profiles` | Get available metadata profiles for adding authors |
@@ -332,10 +334,6 @@ The *arr application is not running or the URL is incorrect. Verify:
 
 ### "Sonarr/Radarr/etc not configured"
 You tried to use a tool for a service that isn't configured. Add the corresponding URL and API_KEY environment variables.
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
