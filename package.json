@@ -1,6 +1,6 @@
 {
   "name": "mcp-arr-server",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "mcpName": "io.github.aplaceforallmystuff/mcp-arr",
   "description": "MCP server for *arr media management suite - Sonarr, Radarr, Lidarr, Readarr, Prowlarr",
   "main": "dist/index.js",
@@ -32,8 +32,10 @@
   ],
   "author": "Jim Christian",
   "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2"
+  },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.2",
     "@types/node": "^20.19.29",
     "typescript": "^5.3.0"
   },
