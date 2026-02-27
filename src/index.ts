@@ -1638,7 +1638,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "lidarr_search": {
         if (!clients.lidarr) throw new Error("Lidarr not configured");
-        const term = (args as { term: string }).term;
+        const a = args as { term?: string; query?: string; artist?: string; name?: string };
+        const term = a.term ?? a.query ?? a.artist ?? a.name;
+        if (!term) throw new Error("term required (artist name)");
         const results = await clients.lidarr.searchArtists(term);
         return {
           content: [{
@@ -1646,9 +1648,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: JSON.stringify({
               count: results.length,
               results: results.slice(0, 10).map(r => ({
-                title: r.title,
+                artistName: r.artistName ?? r.title,
+                disambiguation: r.disambiguation,
                 foreignArtistId: r.foreignArtistId,
-                overview: r.overview?.substring(0, 200) + (r.overview && r.overview.length > 200 ? '...' : ''),
+                overview: r.overview ? (r.overview.substring(0, 200) + (r.overview.length > 200 ? '...' : '')) : undefined,
               })),
             }, null, 2),
           }],

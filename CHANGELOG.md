@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-02-27
+
+### Fixed
+- `lidarr_search` now returns `artistName` and `disambiguation` instead of generic `title` field
+- `lidarr_search` accepts `term`, `query`, `artist`, or `name` parameters with validation
+- Fixed null safety on `overview` field truncation in Lidarr search results
+
+Based on [PR #2](https://github.com/aplaceforallmystuff/mcp-arr/pull/2) by [@bndlfm](https://github.com/bndlfm).
+
 ## [1.5.2] - 2026-02-27
 
 ### Fixed

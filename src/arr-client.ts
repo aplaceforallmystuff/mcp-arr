@@ -438,6 +438,8 @@ export interface SearchResult {
   imdbId?: string;
   // Lidarr specific
   foreignArtistId?: string;
+  artistName?: string;
+  disambiguation?: string;
   // Readarr specific
   foreignAuthorId?: string;
 }

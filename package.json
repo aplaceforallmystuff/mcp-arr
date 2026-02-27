@@ -1,6 +1,6 @@
 {
   "name": "mcp-arr-server",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "mcpName": "io.github.aplaceforallmystuff/mcp-arr",
   "description": "MCP server for *arr media management suite - Sonarr, Radarr, Lidarr, Readarr, Prowlarr",
   "main": "dist/index.js",
