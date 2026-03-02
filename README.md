@@ -135,9 +135,9 @@ Add to `~/.claude.json`:
 ### Searching & Adding Content
 - "Search for sci-fi shows on Sonarr"
 - "Find action movies from the 90s"
-- "Add Severance to my TV library"
-- "Add The Menu to Radarr"
-- "Search for jazz albums and add Miles Davis"
+- "Add this show to my TV library"
+- "Add that movie to Radarr"
+- "Search for jazz albums and add this artist"
 - "Add this movie with my '4k' tag"
 - "What tags do I have in Sonarr?"
 
