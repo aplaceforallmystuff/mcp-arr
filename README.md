@@ -6,18 +6,19 @@
   <img src="docs/mcp-arr-logo.png" alt="MCP *arr Server" width="400">
 </p> -->
 
+[![Oathe Security](https://img.shields.io/endpoint?url=https%3A%2F%2Faudit-engine.oathe.ai%2Fapi%2Fbadge%2Faplaceforallmystuff%2Fmcp-arr&style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nd2hpdGUnPjxwYXRoIGQ9J00xMiAyQzkuMjQgMiA3IDQuMjQgNyA3djNINmMtMS4xIDAtMiAuOS0yIDJ2OGMwIDEuMS45IDIgMiAyaDEyYzEuMSAwIDItLjkgMi0ydi04YzAtMS4xLS45LTItMi0yaC0xVjdjMC0yLjc2LTIuMjQtNS01LTV6bTMgMTBIOVY3YzAtMS42NiAxLjM0LTMgMy0zczMgMS4zNCAzIDN2M3onLz48L3N2Zz4=&labelColor=000000&cacheSeconds=3600)](https://oathe.ai/report/aplaceforallmystuff/mcp-arr)
 [![npm version](https://img.shields.io/npm/v/mcp-arr-server.svg)](https://www.npmjs.com/package/mcp-arr-server)
 [![CI](https://github.com/aplaceforallmystuff/mcp-arr/actions/workflows/ci.yml/badge.svg)](https://github.com/aplaceforallmystuff/mcp-arr/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
 
-MCP server for the [*arr media management suite](https://wiki.servarr.com/) - Sonarr, Radarr, Lidarr, Readarr, and Prowlarr.
+MCP server for the [*arr media management suite](https://wiki.servarr.com/) - Sonarr, Radarr, Lidarr, and Prowlarr.
 
 ## Why Use This?
 
 - **Unified media management** - Control all your *arr applications from one interface
 - **Natural language queries** - Ask about your library in plain English
-- **Cross-service search** - Find content across TV, movies, music, and books simultaneously
+- **Cross-service search** - Find content across TV, movies, and music simultaneously
 - **Download monitoring** - Check queue status and progress across all services
 - **Calendar integration** - See upcoming releases for all media types
 - **Configuration review** - Get AI-powered suggestions for optimizing your setup
@@ -30,7 +31,6 @@ MCP server for the [*arr media management suite](https://wiki.servarr.com/) - So
 | **Sonarr (TV)** | List series, view episodes, search shows, trigger downloads, check queue, view calendar, review setup |
 | **Radarr (Movies)** | List movies, search films, trigger downloads, check queue, view releases, review setup |
 | **Lidarr (Music)** | List artists, view albums, search musicians, trigger downloads, check queue, view calendar, review setup |
-| **Readarr (Books)** | List authors, view books, search writers, trigger downloads, check queue, view calendar, review setup |
 | **Prowlarr (Indexers)** | List indexers, search across all trackers, test health, view statistics |
 | **Cross-Service** | Status check, unified search across all configured services |
 | **Configuration** | Quality profiles, download clients, naming conventions, health checks, storage info |
@@ -43,7 +43,6 @@ MCP server for the [*arr media management suite](https://wiki.servarr.com/) - So
   - [Sonarr](https://sonarr.tv/) for TV series
   - [Radarr](https://radarr.video/) for movies
   - [Lidarr](https://lidarr.audio/) for music
-  - [Readarr](https://readarr.com/) for books
   - [Prowlarr](https://prowlarr.com/) for indexer management
 
 ## Installation
@@ -95,8 +94,6 @@ Add to your Claude Desktop config file:
         "RADARR_API_KEY": "your-radarr-api-key",
         "LIDARR_URL": "http://localhost:8686",
         "LIDARR_API_KEY": "your-lidarr-api-key",
-        "READARR_URL": "http://localhost:8787",
-        "READARR_API_KEY": "your-readarr-api-key",
         "PROWLARR_URL": "http://localhost:9696",
         "PROWLARR_API_KEY": "your-prowlarr-api-key"
       }
@@ -134,7 +131,6 @@ Add to `~/.claude.json`:
 - "Show me all my TV series"
 - "What movies do I have in Radarr?"
 - "List all artists in my music library"
-- "How many books do I have by this author?"
 
 ### Searching & Adding Content
 - "Search for sci-fi shows on Sonarr"
@@ -142,7 +138,6 @@ Add to `~/.claude.json`:
 - "Add Severance to my TV library"
 - "Add The Menu to Radarr"
 - "Search for jazz albums and add Miles Davis"
-- "Look up fantasy book series"
 - "Add this movie with my '4k' tag"
 - "What tags do I have in Sonarr?"
 
@@ -155,14 +150,12 @@ Add to `~/.claude.json`:
 - "What TV episodes are coming this week?"
 - "Show upcoming movie releases"
 - "Any new albums coming out this month?"
-- "Show me upcoming book releases"
 
 ### Downloading Content
 - "What episodes of this show am I missing?"
 - "Download the missing episodes for that series"
 - "Search for this specific movie"
 - "Grab that album I'm missing"
-- "Download all missing books for this author"
 
 ### Indexer Management
 - "Are my indexers healthy?"
@@ -235,22 +228,6 @@ Add to `~/.claude.json`:
 | `lidarr_search_missing` | Trigger search for all missing albums for an artist |
 | `lidarr_get_calendar` | See upcoming album releases |
 
-### Readarr Tools (Books)
-
-| Tool | Description |
-|------|-------------|
-| `readarr_get_authors` | List all authors in your library |
-| `readarr_search` | Search for authors by name (returns foreignAuthorId for adding) |
-| `readarr_add_author` | Add an author to Readarr (supports tags) |
-| `readarr_get_root_folders` | Get available root folders for adding authors |
-| `readarr_get_quality_profiles` | Get available quality profiles for adding authors |
-| `readarr_get_metadata_profiles` | Get available metadata profiles for adding authors |
-| `readarr_get_queue` | View current download queue |
-| `readarr_get_books` | List books for an author (shows missing vs available) |
-| `readarr_search_book` | Trigger search for specific book(s) |
-| `readarr_search_missing` | Trigger search for all missing books for an author |
-| `readarr_get_calendar` | See upcoming book releases |
-
 ### Prowlarr Tools (Indexers)
 
 | Tool | Description |
@@ -262,7 +239,7 @@ Add to `~/.claude.json`:
 
 ### Configuration Review Tools
 
-These tools are available for Sonarr, Radarr, Lidarr, and Readarr. Replace `{service}` with the service name (e.g., `sonarr_get_quality_profiles`).
+These tools are available for Sonarr, Radarr, and Lidarr. Replace `{service}` with the service name (e.g., `sonarr_get_quality_profiles`).
 
 | Tool | Description |
 |------|-------------|
