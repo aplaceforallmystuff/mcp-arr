@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+- Readarr (Books) support — replaced by Booklore + Shelfmark in Docker stack
+
 ## [1.5.3] - 2026-02-27
 
 ### Fixed

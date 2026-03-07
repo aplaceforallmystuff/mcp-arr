@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.aplaceforallmystuff/mcp-arr",
-  "description": "MCP server for *arr media suite - Sonarr, Radarr, Lidarr, Readarr, Prowlarr",
+  "description": "MCP server for *arr media suite - Sonarr, Radarr, Lidarr, Prowlarr",
   "repository": {
     "url": "https://github.com/aplaceforallmystuff/mcp-arr",
     "source": "github"
@@ -57,20 +57,6 @@
           "format": "string",
           "isSecret": true,
           "name": "LIDARR_API_KEY"
-        },
-        {
-          "description": "Readarr server URL",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": false,
-          "name": "READARR_URL"
-        },
-        {
-          "description": "Readarr API key",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": true,
-          "name": "READARR_API_KEY"
         },
         {
           "description": "Prowlarr server URL",

@@ -7,7 +7,6 @@ meta:
     - sonarr
     - radarr
     - lidarr
-    - readarr
     - prowlarr
     - media-management
     - plex
@@ -15,7 +14,7 @@ meta:
     - entertainment
 about:
   title: "*arr Media Management"
-  description: "MCP server for the *arr media management suite - Sonarr (TV), Radarr (Movies), Lidarr (Music), Readarr (Books), and Prowlarr (Indexers). Manage your media library, search for content, monitor downloads, and get AI-powered configuration recommendations using TRaSH Guides."
+  description: "MCP server for the *arr media management suite - Sonarr (TV), Radarr (Movies), Lidarr (Music), and Prowlarr (Indexers). Manage your media library, search for content, monitor downloads, and get AI-powered configuration recommendations using TRaSH Guides."
   icon: https://wiki.servarr.com/assets/servarr.png
 source:
   project: https://github.com/aplaceforallmystuff/mcp-arr
@@ -35,9 +34,6 @@ config:
     - name: LIDARR_URL
       description: "Lidarr base URL (e.g., http://localhost:8686 or http://lidarr:8686)"
       example: "http://localhost:8686"
-    - name: READARR_URL
-      description: "Readarr base URL (e.g., http://localhost:8787 or http://readarr:8787)"
-      example: "http://localhost:8787"
     - name: PROWLARR_URL
       description: "Prowlarr base URL (e.g., http://localhost:9696 or http://prowlarr:9696)"
       example: "http://localhost:9696"
@@ -54,10 +50,6 @@ config:
       env: LIDARR_API_KEY
       description: "Lidarr API key from Settings > General > Security"
       example: "<your-lidarr-api-key>"
-    - name: arr.readarr-api-key
-      env: READARR_API_KEY
-      description: "Readarr API key from Settings > General > Security"
-      example: "<your-readarr-api-key>"
     - name: arr.prowlarr-api-key
       env: PROWLARR_API_KEY
       description: "Prowlarr API key from Settings > General > Security"

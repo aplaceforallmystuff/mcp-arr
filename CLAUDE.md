@@ -1,6 +1,6 @@
 # CLAUDE.md - mcp-arr
 
-MCP server for the *arr media management suite (Sonarr, Radarr, Lidarr, Readarr, Prowlarr).
+MCP server for the *arr media management suite (Sonarr, Radarr, Lidarr, Prowlarr).
 
 ## Tech Stack
 
@@ -18,7 +18,6 @@ src/
 │   ├── sonarr.ts     # TV show management
 │   ├── radarr.ts     # Movie management
 │   ├── lidarr.ts     # Music management
-│   ├── readarr.ts    # Book management
 │   └── prowlarr.ts   # Indexer management
 └── types.ts          # Shared TypeScript types
 ```
@@ -46,8 +45,6 @@ node dist/index.js
 | RADARR_API_KEY | For Radarr | API key |
 | LIDARR_URL | For Lidarr | Base URL |
 | LIDARR_API_KEY | For Lidarr | API key |
-| READARR_URL | For Readarr | Base URL |
-| READARR_API_KEY | For Readarr | API key |
 | PROWLARR_URL | For Prowlarr | Base URL |
 | PROWLARR_API_KEY | For Prowlarr | API key |
 
