@@ -304,24 +304,6 @@ if (clients.sonarr) {
         required: ["tvdbId", "title", "qualityProfileId", "rootFolderPath"],
       },
     },
-    {
-      name: "sonarr_get_root_folders",
-      description: "Get available root folders for Sonarr. Use this to find valid rootFolderPath values when adding a series.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: "sonarr_get_quality_profiles",
-      description: "Get available quality profiles for Sonarr. Use this to find valid qualityProfileId values when adding a series.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    }
   );
 }
 
@@ -428,24 +410,6 @@ if (clients.radarr) {
         required: ["tmdbId", "title", "qualityProfileId", "rootFolderPath"],
       },
     },
-    {
-      name: "radarr_get_root_folders",
-      description: "Get available root folders for Radarr. Use this to find valid rootFolderPath values when adding a movie.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: "radarr_get_quality_profiles",
-      description: "Get available quality profiles for Radarr. Use this to find valid qualityProfileId values when adding a movie.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    }
   );
 }
 
@@ -1276,28 +1240,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "sonarr_get_root_folders": {
-        if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const folders = await clients.sonarr.getRootFolders();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(folders, null, 2),
-          }],
-        };
-      }
-
-      case "sonarr_get_quality_profiles": {
-        if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const profiles = await clients.sonarr.getQualityProfiles();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
-          }],
-        };
-      }
-
       // Radarr handlers
       case "radarr_get_movies": {
         if (!clients.radarr) throw new Error("Radarr not configured");
@@ -1409,28 +1351,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               path: added.path,
               monitored: added.monitored,
             }, null, 2),
-          }],
-        };
-      }
-
-      case "radarr_get_root_folders": {
-        if (!clients.radarr) throw new Error("Radarr not configured");
-        const folders = await clients.radarr.getRootFolders();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(folders, null, 2),
-          }],
-        };
-      }
-
-      case "radarr_get_quality_profiles": {
-        if (!clients.radarr) throw new Error("Radarr not configured");
-        const profiles = await clients.radarr.getQualityProfiles();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
           }],
         };
       }
