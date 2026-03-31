@@ -266,6 +266,20 @@ if (clients.sonarr) {
       },
     },
     {
+      name: "sonarr_refresh_series",
+      description: "Trigger a metadata refresh for a specific series in Sonarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          seriesId: {
+            type: "number",
+            description: "Series ID to refresh",
+          },
+        },
+        required: ["seriesId"],
+      },
+    },
+    {
       name: "sonarr_add_series",
       description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
       inputSchema: {
@@ -365,6 +379,20 @@ if (clients.radarr) {
           movieId: {
             type: "number",
             description: "Movie ID to search for",
+          },
+        },
+        required: ["movieId"],
+      },
+    },
+    {
+      name: "radarr_refresh_movie",
+      description: "Trigger a metadata refresh for a specific movie in Radarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          movieId: {
+            type: "number",
+            description: "Movie ID to refresh",
           },
         },
         required: ["movieId"],
@@ -1217,6 +1245,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "sonarr_refresh_series": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const seriesId = (args as { seriesId: number }).seriesId;
+        const result = await clients.sonarr.refreshSeries(seriesId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Refresh triggered for series`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
       case "sonarr_add_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
@@ -1326,6 +1370,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: JSON.stringify({
               success: true,
               message: `Search triggered for movie`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "radarr_refresh_movie": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const movieId = (args as { movieId: number }).movieId;
+        const result = await clients.radarr.refreshMovie(movieId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Refresh triggered for movie`,
               commandId: result.id,
             }, null, 2),
           }],
