@@ -174,10 +174,23 @@ if (clients.sonarr) {
   TOOLS.push(
     {
       name: "sonarr_get_series",
-      description: "Get all TV series in Sonarr library",
+      description: "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of series to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of series to skip before returning results (default: 0)",
+          },
+          search: {
+            type: "string",
+            description: "Optional case-insensitive title filter",
+          },
+        },
         required: [],
       },
     },
@@ -266,6 +279,20 @@ if (clients.sonarr) {
       },
     },
     {
+      name: "sonarr_refresh_series",
+      description: "Trigger a metadata refresh for a specific series in Sonarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          seriesId: {
+            type: "number",
+            description: "Series ID to refresh",
+          },
+        },
+        required: ["seriesId"],
+      },
+    },
+    {
       name: "sonarr_add_series",
       description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
       inputSchema: {
@@ -312,10 +339,23 @@ if (clients.radarr) {
   TOOLS.push(
     {
       name: "radarr_get_movies",
-      description: "Get all movies in Radarr library",
+      description: "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of movies to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of movies to skip before returning results (default: 0)",
+          },
+          search: {
+            type: "string",
+            description: "Optional case-insensitive title filter",
+          },
+        },
         required: [],
       },
     },
@@ -365,6 +405,20 @@ if (clients.radarr) {
           movieId: {
             type: "number",
             description: "Movie ID to search for",
+          },
+        },
+        required: ["movieId"],
+      },
+    },
+    {
+      name: "radarr_refresh_movie",
+      description: "Trigger a metadata refresh for a specific movie in Radarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          movieId: {
+            type: "number",
+            description: "Movie ID to refresh",
           },
         },
         required: ["movieId"],
@@ -1089,13 +1143,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Sonarr handlers
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const series = await clients.sonarr.getSeries();
+        const { limit = 25, offset = 0, search } = args as {
+          limit?: number;
+          offset?: number;
+          search?: string;
+        };
+        const normalizedLimit = Math.max(1, Math.min(limit, 100));
+        const normalizedOffset = Math.max(0, offset);
+        const filter = search?.trim().toLowerCase();
+
+        const allSeries = await clients.sonarr.getSeries();
+        const filteredSeries = filter
+          ? allSeries.filter(s => s.title.toLowerCase().includes(filter))
+          : allSeries;
+        const pagedSeries = filteredSeries.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
-              count: series.length,
-              series: series.map(s => ({
+              total: allSeries.length,
+              filteredCount: filteredSeries.length,
+              returned: pagedSeries.length,
+              offset: normalizedOffset,
+              limit: normalizedLimit,
+              hasMore: normalizedOffset + normalizedLimit < filteredSeries.length,
+              nextOffset: normalizedOffset + normalizedLimit < filteredSeries.length
+                ? normalizedOffset + normalizedLimit
+                : null,
+              search: search ?? null,
+              series: pagedSeries.map(s => ({
                 id: s.id,
                 title: s.title,
                 year: s.year,
@@ -1217,6 +1293,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "sonarr_refresh_series": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const seriesId = (args as { seriesId: number }).seriesId;
+        const series = await clients.sonarr.getSeriesById(seriesId);
+        const result = await clients.sonarr.refreshSeries(seriesId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Refresh triggered for series`,
+              series: {
+                id: series.id,
+                title: series.title,
+                year: series.year,
+              },
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
       case "sonarr_add_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
@@ -1243,13 +1341,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Radarr handlers
       case "radarr_get_movies": {
         if (!clients.radarr) throw new Error("Radarr not configured");
-        const movies = await clients.radarr.getMovies();
+        const { limit = 25, offset = 0, search } = args as {
+          limit?: number;
+          offset?: number;
+          search?: string;
+        };
+        const normalizedLimit = Math.max(1, Math.min(limit, 100));
+        const normalizedOffset = Math.max(0, offset);
+        const filter = search?.trim().toLowerCase();
+
+        const allMovies = await clients.radarr.getMovies();
+        const filteredMovies = filter
+          ? allMovies.filter(m => m.title.toLowerCase().includes(filter))
+          : allMovies;
+        const pagedMovies = filteredMovies.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
-              count: movies.length,
-              movies: movies.map(m => ({
+              total: allMovies.length,
+              filteredCount: filteredMovies.length,
+              returned: pagedMovies.length,
+              offset: normalizedOffset,
+              limit: normalizedLimit,
+              hasMore: normalizedOffset + normalizedLimit < filteredMovies.length,
+              nextOffset: normalizedOffset + normalizedLimit < filteredMovies.length
+                ? normalizedOffset + normalizedLimit
+                : null,
+              search: search ?? null,
+              movies: pagedMovies.map(m => ({
                 id: m.id,
                 title: m.title,
                 year: m.year,
@@ -1326,6 +1446,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: JSON.stringify({
               success: true,
               message: `Search triggered for movie`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "radarr_refresh_movie": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const movieId = (args as { movieId: number }).movieId;
+        const movie = await clients.radarr.getMovieById(movieId);
+        const result = await clients.radarr.refreshMovie(movieId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Refresh triggered for movie`,
+              movie: {
+                id: movie.id,
+                title: movie.title,
+                year: movie.year,
+              },
               commandId: result.id,
             }, null, 2),
           }],

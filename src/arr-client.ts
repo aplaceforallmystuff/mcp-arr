@@ -605,6 +605,19 @@ export class SonarrClient extends ArrClient {
       }),
     });
   }
+
+  /**
+   * Trigger a refresh for a specific series
+   */
+  async refreshSeries(seriesId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'RefreshSeries',
+        seriesId,
+      }),
+    });
+  }
 }
 
 export class RadarrClient extends ArrClient {
@@ -657,6 +670,19 @@ export class RadarrClient extends ArrClient {
       method: 'POST',
       body: JSON.stringify({
         name: 'MoviesSearch',
+        movieIds: [movieId],
+      }),
+    });
+  }
+
+  /**
+   * Trigger a refresh for a specific movie
+   */
+  async refreshMovie(movieId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'RefreshMovie',
         movieIds: [movieId],
       }),
     });
