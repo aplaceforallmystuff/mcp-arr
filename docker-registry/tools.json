@@ -9,6 +9,34 @@
     }
   },
   {
+    "name": "search",
+    "description": "Search across configured *arr libraries plus TRaSH Guides reference profiles",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Natural-language search query"
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "fetch",
+    "description": "Fetch a specific item returned by search",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Opaque result id returned by search"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  {
     "name": "arr_search_all",
     "description": "Search across all configured *arr services for any media",
     "inputSchema": {
@@ -47,10 +75,19 @@
   },
   {
     "name": "sonarr_get_queue",
-    "description": "Get Sonarr download queue",
+    "description": "Get Sonarr download queue. Supports pagination with limit and offset.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of queue items to return (default: 25, max: 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Number of queue items to skip before returning results (default: 0)"
+        }
+      },
       "required": []
     }
   },
@@ -203,10 +240,19 @@
   },
   {
     "name": "radarr_get_queue",
-    "description": "Get Radarr download queue",
+    "description": "Get Radarr download queue. Supports pagination with limit and offset.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of queue items to return (default: 25, max: 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Number of queue items to skip before returning results (default: 0)"
+        }
+      },
       "required": []
     }
   },
@@ -326,10 +372,19 @@
   },
   {
     "name": "lidarr_get_queue",
-    "description": "Get Lidarr download queue",
+    "description": "Get Lidarr download queue. Supports pagination with limit and offset.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of queue items to return (default: 25, max: 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Number of queue items to skip before returning results (default: 0)"
+        }
+      },
       "required": []
     }
   },

@@ -1,6 +1,6 @@
 {
   "name": "mcp-arr-server",
-  "version": "1.5.4",
+  "version": "1.6.1",
   "mcpName": "io.github.aplaceforallmystuff/mcp-arr",
   "description": "MCP server for *arr media management suite - Sonarr, Radarr, Lidarr, Prowlarr",
   "main": "dist/index.js",
@@ -15,6 +15,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
+    "start": "node dist/index.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -27,6 +28,7 @@
     "plex",
     "model-context-protocol",
     "claude",
+    "chatgpt",
     "ai"
   ],
   "author": "Jim Christian",

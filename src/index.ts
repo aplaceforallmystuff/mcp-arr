@@ -14,11 +14,13 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { createServer } from "node:http";
 import {
   SonarrClient,
   RadarrClient,
@@ -27,6 +29,12 @@ import {
   ArrService,
 } from "./arr-client.js";
 import { trashClient, TrashService } from "./trash-client.js";
+
+const SERVER_VERSION = "1.6.1";
+const TRANSPORT_MODE = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
+const HTTP_HOST = process.env.HOST || "127.0.0.1";
+const HTTP_PORT = Number(process.env.PORT || "3000");
+const HTTP_PATH = process.env.MCP_PATH || "/mcp";
 
 // Configuration from environment
 interface ServiceConfig {
@@ -45,12 +53,6 @@ const services: ServiceConfig[] = [
 
 // Check which services are configured
 const configuredServices = services.filter(s => s.url && s.apiKey);
-
-if (configuredServices.length === 0) {
-  console.error("Error: No *arr services configured. Set at least one pair of URL and API_KEY environment variables.");
-  console.error("Example: SONARR_URL and SONARR_API_KEY");
-  process.exit(1);
-}
 
 // Initialize clients for configured services
 const clients: {
@@ -83,11 +85,41 @@ const TOOLS: Tool[] = [
   // General tool available for all
   {
     name: "arr_status",
-    description: `Get status of all configured *arr services. Currently configured: ${configuredServices.map(s => s.displayName).join(', ')}`,
+    description: configuredServices.length > 0
+      ? `Get status of all configured *arr services. Currently configured: ${configuredServices.map(s => s.displayName).join(', ')}`
+      : "Get status of all supported *arr services. No local *arr services are currently configured, but TRaSH reference tools remain available.",
     inputSchema: {
       type: "object" as const,
       properties: {},
       required: [],
+    },
+  },
+  {
+    name: "search",
+    description: "Search across configured *arr libraries plus TRaSH Guides reference profiles. This is the primary discovery tool for remote MCP clients such as ChatGPT.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Natural-language search query",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "fetch",
+    description: "Fetch a specific item returned by search. Accepts an opaque item id from the search tool.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        id: {
+          type: "string",
+          description: "Opaque result id returned by search",
+        },
+      },
+      required: ["id"],
     },
   },
 ];
@@ -197,10 +229,19 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_get_queue",
-      description: "Get Sonarr download queue",
+      description: "Get Sonarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of queue items to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of queue items to skip before returning results (default: 0)",
+          },
+        },
         required: [],
       },
     },
@@ -335,10 +376,19 @@ if (clients.radarr) {
     },
     {
       name: "radarr_get_queue",
-      description: "Get Radarr download queue",
+      description: "Get Radarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of queue items to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of queue items to skip before returning results (default: 0)",
+          },
+        },
         required: [],
       },
     },
@@ -441,10 +491,19 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_queue",
-      description: "Get Lidarr download queue",
+      description: "Get Lidarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of queue items to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of queue items to skip before returning results (default: 0)",
+          },
+        },
         required: [],
       },
     },
@@ -779,7 +838,7 @@ TOOLS.push(
 const server = new Server(
   {
     name: "mcp-arr",
-    version: "1.0.0",
+    version: SERVER_VERSION,
   },
   {
     capabilities: {
@@ -787,6 +846,231 @@ const server = new Server(
     },
   }
 );
+
+type SearchEntry = {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+  service: string;
+  summary?: string;
+};
+
+function buildResourceUrl(path: string): string {
+  return `mcp-arr://${path}`;
+}
+
+function jsonText(data: unknown) {
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  };
+}
+
+function textError(message: string) {
+  return {
+    content: [{ type: "text" as const, text: message }],
+    isError: true,
+  };
+}
+
+async function runUnifiedSearch(query: string): Promise<SearchEntry[]> {
+  const results: SearchEntry[] = [];
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery.length === 0) {
+    return results;
+  }
+
+  const lowerQuery = trimmedQuery.toLowerCase();
+
+  for (const service of ["radarr", "sonarr"] as const) {
+    const profiles = await trashClient.listProfiles(service);
+    results.push(
+      ...profiles
+        .filter((profile) =>
+          profile.name.toLowerCase().includes(lowerQuery) ||
+          profile.description?.toLowerCase().includes(lowerQuery)
+        )
+        .slice(0, 8)
+        .map((profile) => ({
+          id: `trash-profile:${service}:${profile.name}`,
+          title: `${profile.name} (${service})`,
+          url: buildResourceUrl(`trash/profile/${service}/${encodeURIComponent(profile.name)}`),
+          type: "trash_profile",
+          service,
+          summary: profile.description?.replace(/<br>/g, " "),
+        }))
+    );
+  }
+
+  if (clients.sonarr) {
+    const series = await clients.sonarr.searchSeries(trimmedQuery);
+    results.push(
+      ...series.slice(0, 5).map((item) => ({
+        id: `arr:sonarr:series:${item.tvdbId}`,
+        title: `${item.title}${item.year ? ` (${item.year})` : ""}`,
+        url: buildResourceUrl(`arr/sonarr/series/${item.tvdbId}`),
+        type: "series",
+        service: "sonarr",
+        summary: item.overview?.slice(0, 220),
+      }))
+    );
+  }
+
+  if (clients.radarr) {
+    const movies = await clients.radarr.searchMovies(trimmedQuery);
+    results.push(
+      ...movies.slice(0, 5).map((item) => ({
+        id: `arr:radarr:movie:${item.tmdbId}`,
+        title: `${item.title}${item.year ? ` (${item.year})` : ""}`,
+        url: buildResourceUrl(`arr/radarr/movie/${item.tmdbId}`),
+        type: "movie",
+        service: "radarr",
+        summary: item.overview?.slice(0, 220),
+      }))
+    );
+  }
+
+  if (clients.lidarr) {
+    const artists = await clients.lidarr.searchArtists(trimmedQuery);
+    results.push(
+      ...artists.slice(0, 5).map((item) => ({
+        id: `arr:lidarr:artist:${item.foreignArtistId}`,
+        title: item.artistName || item.title,
+        url: buildResourceUrl(`arr/lidarr/artist/${item.foreignArtistId}`),
+        type: "artist",
+        service: "lidarr",
+        summary: item.overview?.slice(0, 220),
+      }))
+    );
+  }
+
+  return results;
+}
+
+async function fetchSearchEntry(id: string): Promise<unknown> {
+  const [kind, service, subtype, rawId] = id.split(":");
+
+  if (kind === "trash-profile" && (service === "radarr" || service === "sonarr")) {
+    const profile = await trashClient.getProfile(service, rawId);
+    if (!profile) {
+      throw new Error(`TRaSH profile '${rawId}' not found for ${service}`);
+    }
+
+    return {
+      id,
+      title: `${profile.name} (${service})`,
+      url: buildResourceUrl(`trash/profile/${service}/${encodeURIComponent(profile.name)}`),
+      service,
+      type: "trash_profile",
+      data: {
+        name: profile.name,
+        description: profile.trash_description?.replace(/<br>/g, "\n"),
+        upgradeAllowed: profile.upgradeAllowed,
+        cutoff: profile.cutoff,
+        minFormatScore: profile.minFormatScore,
+        cutoffFormatScore: profile.cutoffFormatScore,
+        language: profile.language,
+        qualities: profile.items,
+        customFormats: Object.entries(profile.formatItems || {}).map(([name, trashId]) => ({
+          name,
+          trash_id: trashId,
+        })),
+      },
+    };
+  }
+
+  if (kind !== "arr") {
+    throw new Error(`Unsupported fetch id '${id}'`);
+  }
+
+  if (service === "sonarr" && subtype === "series" && clients.sonarr) {
+    const tvdbId = Number(rawId);
+    const matches = (await clients.sonarr.searchSeries(rawId)).filter((item) => item.tvdbId === tvdbId);
+    return {
+      id,
+      title: matches[0]?.title || rawId,
+      url: buildResourceUrl(`arr/sonarr/series/${rawId}`),
+      service,
+      type: subtype,
+      data: matches.slice(0, 10),
+    };
+  }
+
+  if (service === "radarr" && subtype === "movie" && clients.radarr) {
+    const tmdbId = Number(rawId);
+    const matches = (await clients.radarr.searchMovies(rawId)).filter((item) => item.tmdbId === tmdbId);
+    return {
+      id,
+      title: matches[0]?.title || rawId,
+      url: buildResourceUrl(`arr/radarr/movie/${rawId}`),
+      service,
+      type: subtype,
+      data: matches.slice(0, 10),
+    };
+  }
+
+  if (service === "lidarr" && subtype === "artist" && clients.lidarr) {
+    const matches = (await clients.lidarr.searchArtists(rawId)).filter((item) => item.foreignArtistId === rawId);
+    return {
+      id,
+      title: matches[0]?.artistName || matches[0]?.title || rawId,
+      url: buildResourceUrl(`arr/lidarr/artist/${rawId}`),
+      service,
+      type: subtype,
+      data: matches.slice(0, 10),
+    };
+  }
+
+  throw new Error(`Unsupported or unavailable fetch target '${id}'`);
+}
+
+type QueueCapableClient = SonarrClient | RadarrClient | LidarrClient;
+
+async function getPaginatedQueue(
+  client: QueueCapableClient,
+  args: { limit?: number; offset?: number } | undefined
+) {
+  const limit = Math.min(Math.max(Math.floor(args?.limit ?? 25), 1), 100);
+  const offset = Math.max(Math.floor(args?.offset ?? 0), 0);
+  const pageSize = 100;
+  const records = [];
+  let totalRecords = 0;
+  let page = 1;
+
+  while (true) {
+    const queuePage = await client.getQueue(page, pageSize);
+    totalRecords = queuePage.totalRecords;
+    records.push(...queuePage.records);
+
+    if (records.length >= totalRecords || queuePage.records.length === 0) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  const items = records.slice(offset, offset + limit).map((q) => ({
+    title: q.title,
+    status: q.status,
+    progress: q.size > 0 ? ((1 - q.sizeleft / q.size) * 100).toFixed(1) + "%" : "unknown",
+    timeLeft: q.timeleft,
+    downloadClient: q.downloadClient,
+    protocol: q.protocol,
+    trackedDownloadStatus: q.trackedDownloadStatus,
+    trackedDownloadState: q.trackedDownloadState,
+  }));
+
+  return {
+    total: totalRecords,
+    returned: items.length,
+    offset,
+    limit,
+    hasMore: offset + items.length < totalRecords,
+    nextOffset: offset + items.length < totalRecords ? offset + items.length : null,
+    items,
+  };
+}
 
 // Handle list tools request
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -799,6 +1083,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
+      case "search": {
+        const query = (args as { query: string }).query;
+        const results = await runUnifiedSearch(query);
+        return jsonText({ results });
+      }
+
+      case "fetch": {
+        const id = (args as { id: string }).id;
+        const result = await fetchSearchEntry(id);
+        return jsonText(result);
+      }
+
       case "arr_status": {
         const statuses: Record<string, unknown> = {};
         for (const service of configuredServices) {
@@ -827,9 +1123,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             statuses[service.name] = { configured: false };
           }
         }
-        return {
-          content: [{ type: "text", text: JSON.stringify(statuses, null, 2) }],
-        };
+        return jsonText(statuses);
       }
 
       // Dynamic config tool handlers
@@ -1133,22 +1427,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "sonarr_get_queue": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const queue = await clients.sonarr.getQueue();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              totalRecords: queue.totalRecords,
-              items: queue.records.map(q => ({
-                title: q.title,
-                status: q.status,
-                progress: ((1 - q.sizeleft / q.size) * 100).toFixed(1) + '%',
-                timeLeft: q.timeleft,
-                downloadClient: q.downloadClient,
-              })),
-            }, null, 2),
-          }],
-        };
+        return jsonText(await getPaginatedQueue(clients.sonarr, args as { limit?: number; offset?: number }));
       }
 
       case "sonarr_get_calendar": {
@@ -1287,22 +1566,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "radarr_get_queue": {
         if (!clients.radarr) throw new Error("Radarr not configured");
-        const queue = await clients.radarr.getQueue();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              totalRecords: queue.totalRecords,
-              items: queue.records.map(q => ({
-                title: q.title,
-                status: q.status,
-                progress: ((1 - q.sizeleft / q.size) * 100).toFixed(1) + '%',
-                timeLeft: q.timeleft,
-                downloadClient: q.downloadClient,
-              })),
-            }, null, 2),
-          }],
-        };
+        return jsonText(await getPaginatedQueue(clients.radarr, args as { limit?: number; offset?: number }));
       }
 
       case "radarr_get_calendar": {
@@ -1402,22 +1666,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "lidarr_get_queue": {
         if (!clients.lidarr) throw new Error("Lidarr not configured");
-        const queue = await clients.lidarr.getQueue();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              totalRecords: queue.totalRecords,
-              items: queue.records.map(q => ({
-                title: q.title,
-                status: q.status,
-                progress: ((1 - q.sizeleft / q.size) * 100).toFixed(1) + '%',
-                timeLeft: q.timeleft,
-                downloadClient: q.downloadClient,
-              })),
-            }, null, 2),
-          }],
-        };
+        return jsonText(await getPaginatedQueue(clients.lidarr, args as { limit?: number; offset?: number }));
       }
 
       case "lidarr_get_albums": {
@@ -2038,11 +2287,65 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+async function startHttpServer() {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
+
+  await server.connect(transport);
+
+  const httpServer = createServer(async (req, res) => {
+    if (!req.url) {
+      res.statusCode = 400;
+      res.end("Missing URL");
+      return;
+    }
+
+    const requestUrl = new URL(req.url, `http://${req.headers.host || `${HTTP_HOST}:${HTTP_PORT}`}`);
+
+    if (requestUrl.pathname === "/health" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        status: "ok",
+        version: SERVER_VERSION,
+        transport: "http",
+        configuredServices: configuredServices.map((service) => service.name),
+      }));
+      return;
+    }
+
+    if (requestUrl.pathname !== HTTP_PATH) {
+      res.statusCode = 404;
+      res.end("Not found");
+      return;
+    }
+
+    try {
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      res.statusCode = 500;
+      res.end(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    httpServer.once("error", reject);
+    httpServer.listen(HTTP_PORT, HTTP_HOST, () => resolve());
+  });
+
+  console.error(`*arr MCP server running over HTTP at http://${HTTP_HOST}:${HTTP_PORT}${HTTP_PATH}`);
+}
+
 // Start the server
 async function main() {
+  if (TRANSPORT_MODE === "http") {
+    await startHttpServer();
+    return;
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`*arr MCP server running - configured services: ${configuredServices.map(s => s.name).join(', ')}`);
+  console.error(`*arr MCP server running over stdio - configured services: ${configuredServices.map(s => s.name).join(', ') || 'none (TRaSH-only mode)'}`);
 }
 
 main().catch((error) => {

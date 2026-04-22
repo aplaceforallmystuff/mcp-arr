@@ -426,8 +426,14 @@ export class ArrClient {
   /**
    * Get download queue
    */
-  async getQueue(): Promise<{ records: QueueItem[]; totalRecords: number }> {
-    return this.request<{ records: QueueItem[]; totalRecords: number }>('/queue?includeUnknownSeriesItems=true&includeUnknownMovieItems=true');
+  async getQueue(page = 1, pageSize = 100): Promise<{ records: QueueItem[]; totalRecords: number }> {
+    const params = new URLSearchParams({
+      includeUnknownSeriesItems: "true",
+      includeUnknownMovieItems: "true",
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    return this.request<{ records: QueueItem[]; totalRecords: number }>(`/queue?${params.toString()}`);
   }
 
   /**

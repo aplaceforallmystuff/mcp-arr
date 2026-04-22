@@ -1,6 +1,6 @@
 # MCP *arr Server
 
-![Architecture](docs/images/architecture-diagram.png)
+![Architecture](docs/mcp-arr-architecture-diagram.png)
 
 <!-- <p align="center">
   <img src="docs/mcp-arr-logo.png" alt="MCP *arr Server" width="400">
@@ -13,6 +13,8 @@
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
 
 MCP server for the [*arr media management suite](https://wiki.servarr.com/) - Sonarr, Radarr, Lidarr, and Prowlarr.
+
+Supports both local `stdio` mode for Claude/Codex-style clients and remote HTTP mode for hosted MCP clients such as ChatGPT connectors.
 
 ## Why Use This?
 
@@ -51,6 +53,68 @@ MCP server for the [*arr media management suite](https://wiki.servarr.com/) - So
 
 ```bash
 npx mcp-arr-server
+```
+
+### Remote HTTP Mode
+
+```bash
+MCP_TRANSPORT=http PORT=3000 npx mcp-arr-server
+```
+
+By default the remote server listens on `127.0.0.1:3000` and serves MCP on `/mcp`.
+
+Environment variables for remote mode:
+
+- `MCP_TRANSPORT=http` to enable remote Streamable HTTP transport
+- `HOST` to override the bind host (default `127.0.0.1`)
+- `PORT` to override the port (default `3000`)
+- `MCP_PATH` to override the MCP endpoint path (default `/mcp`)
+
+### Docker
+
+Build locally:
+
+```bash
+docker build -t mcp-arr .
+```
+
+Run in local stdio mode:
+
+```bash
+docker run --rm -i \
+  -e SONARR_URL=http://host.docker.internal:8989 \
+  -e SONARR_API_KEY=your-sonarr-api-key \
+  mcp-arr
+```
+
+Run in remote HTTP mode:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e MCP_TRANSPORT=http \
+  -e HOST=0.0.0.0 \
+  -e PORT=3000 \
+  -e SONARR_URL=http://host.docker.internal:8989 \
+  -e SONARR_API_KEY=your-sonarr-api-key \
+  mcp-arr
+```
+
+Minimal `docker-compose.yml`:
+
+```yaml
+services:
+  mcp-arr:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      MCP_TRANSPORT: http
+      HOST: 0.0.0.0
+      PORT: 3000
+      SONARR_URL: http://host.docker.internal:8989
+      SONARR_API_KEY: your-sonarr-api-key
+      RADARR_URL: http://host.docker.internal:7878
+      RADARR_API_KEY: your-radarr-api-key
 ```
 
 ### From Source
@@ -125,6 +189,19 @@ Add to `~/.claude.json`:
 
 **Note**: Only configure the services you have running. The server automatically detects which services are available based on the environment variables you provide.
 
+**TRaSH-only mode**: if you don’t configure any *arr services, the server still starts and exposes the TRaSH Guides reference tools plus generic `search` and `fetch`.
+
+## ChatGPT / Remote MCP
+
+To use `mcp-arr` with ChatGPT, run the server in remote HTTP mode on a reachable host and connect ChatGPT to the `/mcp` endpoint.
+
+The server now exposes the generic `search` and `fetch` tools expected by ChatGPT-style remote MCP integrations:
+
+- `search` discovers matching *arr media and TRaSH profiles
+- `fetch` returns structured detail for a selected search result
+
+The existing service-specific tools remain available for richer local or power-user workflows.
+
 ## Usage Examples
 
 ### Library Management
@@ -183,6 +260,8 @@ Add to `~/.claude.json`:
 |------|-------------|
 | `arr_status` | Get connection status for all configured *arr services |
 | `arr_search_all` | Search across all configured services simultaneously |
+| `search` | Generic discovery tool for remote MCP clients such as ChatGPT |
+| `fetch` | Generic detail-fetch tool for items returned by `search` |
 
 ### Sonarr Tools (TV)
 
@@ -193,7 +272,7 @@ Add to `~/.claude.json`:
 | `sonarr_add_series` | Add a TV series to Sonarr (supports tags) |
 | `sonarr_get_root_folders` | Get available root folders for adding series |
 | `sonarr_get_quality_profiles` | Get available quality profiles for adding series |
-| `sonarr_get_queue` | View current download queue |
+| `sonarr_get_queue` | View current download queue with `limit` and `offset` pagination |
 | `sonarr_get_calendar` | See upcoming episodes |
 | `sonarr_get_episodes` | List episodes for a series (shows missing vs available) |
 | `sonarr_search_missing` | Trigger search for all missing episodes in a series |
@@ -208,7 +287,7 @@ Add to `~/.claude.json`:
 | `radarr_add_movie` | Add a movie to Radarr (supports tags) |
 | `radarr_get_root_folders` | Get available root folders for adding movies |
 | `radarr_get_quality_profiles` | Get available quality profiles for adding movies |
-| `radarr_get_queue` | View current download queue |
+| `radarr_get_queue` | View current download queue with `limit` and `offset` pagination |
 | `radarr_get_calendar` | See upcoming releases |
 | `radarr_search_movie` | Trigger search to download a movie in your library |
 
@@ -222,7 +301,7 @@ Add to `~/.claude.json`:
 | `lidarr_get_root_folders` | Get available root folders for adding artists |
 | `lidarr_get_quality_profiles` | Get available quality profiles for adding artists |
 | `lidarr_get_metadata_profiles` | Get available metadata profiles for adding artists |
-| `lidarr_get_queue` | View current download queue |
+| `lidarr_get_queue` | View current download queue with `limit` and `offset` pagination |
 | `lidarr_get_albums` | List albums for an artist (shows missing vs available) |
 | `lidarr_search_album` | Trigger search for a specific album |
 | `lidarr_search_missing` | Trigger search for all missing albums for an artist |
@@ -257,7 +336,7 @@ The `{service}_review_setup` tool returns all configuration in a single call, en
 
 ### TRaSH Guides Tools
 
-Access community-curated quality profiles, custom formats, and naming conventions from [TRaSH Guides](https://trash-guides.info/) directly through Claude. These tools work without any *arr configuration - they fetch reference data from the TRaSH Guides GitHub repository.
+Access community-curated quality profiles, custom formats, and naming conventions from [TRaSH Guides](https://trash-guides.info/) directly through Claude or ChatGPT. These tools work without any *arr configuration - they fetch reference data from the TRaSH Guides GitHub repository.
 
 | Tool | Description |
 |------|-------------|
