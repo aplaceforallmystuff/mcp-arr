@@ -21,6 +21,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import {
   SonarrClient,
   RadarrClient,
@@ -30,7 +31,7 @@ import {
 } from "./arr-client.js";
 import { trashClient, TrashService } from "./trash-client.js";
 
-const SERVER_VERSION = "1.6.2";
+const SERVER_VERSION = "1.6.3";
 const TRANSPORT_MODE = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
 const HTTP_HOST = process.env.HOST || "127.0.0.1";
 const HTTP_PORT = Number(process.env.PORT || "3000");
@@ -2431,7 +2432,7 @@ function formatBytes(bytes: number): string {
 
 async function startHttpServer() {
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+    sessionIdGenerator: randomUUID,
   });
 
   await server.connect(transport);
