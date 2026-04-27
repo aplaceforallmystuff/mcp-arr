@@ -1,0 +1,194 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.6.4) — must exist in CHANGELOG.md'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # ── 1. Validate & prepare ──────────────────────────────────────────────────
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag:     ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      major:   ${{ steps.version.outputs.major }}
+      minor:   ${{ steps.version.outputs.minor }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed to inspect existing tags
+
+      - name: Resolve and validate version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            TAG="v${VERSION}"
+
+            # If the tag already exists, make sure it points to HEAD
+            if git rev-parse "${TAG}" >/dev/null 2>&1; then
+              TAG_SHA=$(git rev-parse "${TAG}")
+              HEAD_SHA=$(git rev-parse HEAD)
+              if [ "${TAG_SHA}" != "${HEAD_SHA}" ]; then
+                echo "::error::Tag ${TAG} already exists and points to ${TAG_SHA}, not HEAD (${HEAD_SHA}). Aborting."
+                exit 1
+              fi
+              echo "Tag ${TAG} already exists and matches HEAD — reusing."
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag "${TAG}"
+              git push origin "${TAG}"
+            fi
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+          fi
+
+          MAJOR="${VERSION%%.*}"
+          MINOR_PATCH="${VERSION#*.}"   # e.g. "6.4"
+          MINOR="${MAJOR}.${MINOR_PATCH%.*}"  # e.g. "1.6"
+
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "major=${MAJOR}"     >> "$GITHUB_OUTPUT"
+          echo "minor=${MINOR}"     >> "$GITHUB_OUTPUT"
+
+  # ── 2. Build & test ────────────────────────────────────────────────────────
+  build-test:
+    needs: prepare
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: node --test
+
+  # ── 3. Docker → GHCR ──────────────────────────────────────────────────────
+  docker:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract changelog notes for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          echo "${NOTES}" > /tmp/release_notes.md
+          echo "notes_file=/tmp/release_notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.minor }}
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.major }}
+            ghcr.io/${{ github.repository }}:latest
+          labels: |
+            org.opencontainers.image.title=mcp-arr
+            org.opencontainers.image.description=MCP server for *arr media management suite
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 4. GitHub Release ─────────────────────────────────────────────────────
+  github-release:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract changelog notes for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          echo "${NOTES}" > /tmp/release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
+
+  # ── 5. npm publish ────────────────────────────────────────────────────────
+  npm-publish:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
