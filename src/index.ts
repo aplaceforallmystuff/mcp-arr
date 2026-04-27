@@ -2431,12 +2431,6 @@ function formatBytes(bytes: number): string {
 }
 
 async function startHttpServer() {
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // stateless mode: no session state, avoids "Server already initialized" errors
-  });
-
-  await server.connect(transport);
-
   const httpServer = createServer(async (req, res) => {
     if (!req.url) {
       res.statusCode = 400;
@@ -2464,6 +2458,15 @@ async function startHttpServer() {
     }
 
     try {
+      // Create a fresh stateless transport per request. Each request is independent
+      // (stateless mode), so we close any previous transport before connecting the new one.
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless: no session ID issued
+      });
+      if (server.transport) {
+        await server.transport.close();
+      }
+      await server.connect(transport);
       await transport.handleRequest(req, res);
     } catch (error) {
       res.statusCode = 500;

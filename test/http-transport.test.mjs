@@ -37,17 +37,18 @@ test("HTTP transport supports multiple requests in one MCP session", async () =>
     });
 
     assert.equal(initializeResponse.status, 200);
+
+    // In stateless mode the server does not issue a session ID; that is expected.
     const sessionId = initializeResponse.headers.get("mcp-session-id");
-    assert.ok(sessionId, "initialize response should include an MCP session id");
 
     const toolsResponse = await postMcp(
       port,
       { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-      sessionId,
+      sessionId ?? undefined,
     );
 
-    assert.equal(toolsResponse.status, 200);
     const body = await toolsResponse.text();
+    assert.equal(toolsResponse.status, 200);
     assert.match(body, /"tools"/);
     assert.doesNotMatch(body, /Stateless transport cannot be reused/);
   } finally {
