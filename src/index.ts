@@ -2432,7 +2432,7 @@ function formatBytes(bytes: number): string {
 
 async function startHttpServer() {
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: randomUUID,
+    sessionIdGenerator: undefined, // stateless mode: no session state, avoids "Server already initialized" errors
   });
 
   await server.connect(transport);
