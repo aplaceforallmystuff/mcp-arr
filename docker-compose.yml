@@ -1,12 +1,12 @@
 services:
   mcp-arr:
-    image: ghcr.io/alejandrosnz/mcp-arr:latest
+    image: ghcr.io/aplaceforallmystuff/mcp-arr:latest
     container_name: mcp-arr
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      # Transport mode: "http" or "stdio" (default)
+      # Setup HTTP Transport mode
       MCP_TRANSPORT: http
       HOST: 0.0.0.0
       PORT: 3000
