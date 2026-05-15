@@ -5,7 +5,7 @@
  * the same REST API pattern with X-Api-Key header authentication.
  */
 
-export type ArrService = 'sonarr' | 'radarr' | 'lidarr' | 'prowlarr';
+export type ArrService = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'prowlarr';
 
 export interface ArrConfig {
   url: string;
@@ -358,6 +358,52 @@ export interface MetadataProfile {
   skipSeriesSecondary: boolean;
   allowedLanguages?: string;
   minPages?: number;
+}
+
+export interface ReadarrAuthor {
+  id: number;
+  authorName: string;
+  sortName: string;
+  foreignAuthorId: string;
+  status: string;
+  overview: string;
+  monitored: boolean;
+  qualityProfileId: number;
+  metadataProfileId: number;
+  rootFolderPath: string;
+  path: string;
+  genres: string[];
+  tags: number[];
+  added: string;
+  ratings: { votes: number; value: number; popularity?: number };
+  statistics: {
+    bookFileCount: number;
+    bookCount: number;
+    totalBookCount: number;
+    sizeOnDisk: number;
+    percentOfBooks: number;
+  };
+}
+
+export interface ReadarrBook {
+  id: number;
+  title: string;
+  authorId: number;
+  foreignBookId: string;
+  monitored: boolean;
+  overview: string;
+  releaseDate: string;
+  pageCount: number;
+  genres: string[];
+  ratings: { votes: number; value: number; popularity?: number };
+  grabbed: boolean;
+  statistics?: {
+    bookFileCount: number;
+    bookCount: number;
+    totalBookCount: number;
+    sizeOnDisk: number;
+    percentOfBooks: number;
+  };
 }
 
 export interface SearchResult {
@@ -795,6 +841,81 @@ export class LidarrClient extends ArrClient {
    */
   async getMetadataProfiles(): Promise<MetadataProfile[]> {
     return this['request']<MetadataProfile[]>('/metadataprofile');
+  }
+}
+
+export class ReadarrClient extends ArrClient {
+  constructor(config: ArrConfig) {
+    super('readarr', config);
+    this.apiVersion = 'v1';
+  }
+
+  async getAuthors(): Promise<ReadarrAuthor[]> {
+    return this['request']<ReadarrAuthor[]>('/author');
+  }
+
+  async getAuthorById(id: number): Promise<ReadarrAuthor> {
+    return this['request']<ReadarrAuthor>(`/author/${id}`);
+  }
+
+  async searchAuthors(term: string): Promise<ReadarrAuthor[]> {
+    return this['request']<ReadarrAuthor[]>(`/author/lookup?term=${encodeURIComponent(term)}`);
+  }
+
+  async addAuthor(author: Partial<ReadarrAuthor> & { foreignAuthorId: string; rootFolderPath: string; qualityProfileId: number; metadataProfileId: number }): Promise<ReadarrAuthor> {
+    return this['request']<ReadarrAuthor>('/author', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...author,
+        monitored: author.monitored ?? true,
+        addOptions: {
+          monitor: 'all',
+          searchForMissingBooks: true,
+        },
+      }),
+    });
+  }
+
+  async getBooks(authorId?: number): Promise<ReadarrBook[]> {
+    const url = authorId ? `/book?authorId=${authorId}` : '/book';
+    return this['request']<ReadarrBook[]>(url);
+  }
+
+  async searchBooks(term: string): Promise<ReadarrBook[]> {
+    return this['request']<ReadarrBook[]>(`/book/lookup?term=${encodeURIComponent(term)}`);
+  }
+
+  async searchBook(bookIds: number[]): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'BookSearch', bookIds }),
+    });
+  }
+
+  async searchMissingBooks(authorId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'AuthorSearch', authorId }),
+    });
+  }
+
+  async refreshAuthor(authorId: number): Promise<{ id: number }> {
+    return this['request']<{ id: number }>('/command', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'RefreshAuthor', authorId }),
+    });
+  }
+
+  async getMetadataProfiles(): Promise<MetadataProfile[]> {
+    return this['request']<MetadataProfile[]>('/metadataprofile');
+  }
+
+  async getCalendar(start?: string, end?: string): Promise<ReadarrBook[]> {
+    const params = new URLSearchParams();
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this['request']<ReadarrBook[]>(`/calendar${query}`);
   }
 }
 

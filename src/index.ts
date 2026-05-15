@@ -9,6 +9,7 @@
  * - SONARR_URL, SONARR_API_KEY
  * - RADARR_URL, RADARR_API_KEY
  * - LIDARR_URL, LIDARR_API_KEY
+ * - READARR_URL, READARR_API_KEY
  * - PROWLARR_URL, PROWLARR_API_KEY
  */
 
@@ -26,6 +27,7 @@ import {
   SonarrClient,
   RadarrClient,
   LidarrClient,
+  ReadarrClient,
   ProwlarrClient,
   ArrService,
 } from "./arr-client.js";
@@ -49,6 +51,7 @@ const services: ServiceConfig[] = [
   { name: 'sonarr', displayName: 'Sonarr (TV)', url: process.env.SONARR_URL, apiKey: process.env.SONARR_API_KEY },
   { name: 'radarr', displayName: 'Radarr (Movies)', url: process.env.RADARR_URL, apiKey: process.env.RADARR_API_KEY },
   { name: 'lidarr', displayName: 'Lidarr (Music)', url: process.env.LIDARR_URL, apiKey: process.env.LIDARR_API_KEY },
+  { name: 'readarr', displayName: 'Readarr (Books)', url: process.env.READARR_URL, apiKey: process.env.READARR_API_KEY },
   { name: 'prowlarr', displayName: 'Prowlarr (Indexers)', url: process.env.PROWLARR_URL, apiKey: process.env.PROWLARR_API_KEY },
 ];
 
@@ -60,6 +63,7 @@ const clients: {
   sonarr?: SonarrClient;
   radarr?: RadarrClient;
   lidarr?: LidarrClient;
+  readarr?: ReadarrClient;
   prowlarr?: ProwlarrClient;
 } = {};
 
@@ -74,6 +78,9 @@ for (const service of configuredServices) {
       break;
     case 'lidarr':
       clients.lidarr = new LidarrClient(config);
+      break;
+    case 'readarr':
+      clients.readarr = new ReadarrClient(config);
       break;
     case 'prowlarr':
       clients.prowlarr = new ProwlarrClient(config);
@@ -201,6 +208,7 @@ function addConfigTools(serviceName: string, displayName: string) {
 if (clients.sonarr) addConfigTools('sonarr', 'Sonarr (TV)');
 if (clients.radarr) addConfigTools('radarr', 'Radarr (Movies)');
 if (clients.lidarr) addConfigTools('lidarr', 'Lidarr (Music)');
+if (clients.readarr) addConfigTools('readarr', 'Readarr (Books)');
 
 // Sonarr tools
 if (clients.sonarr) {
@@ -687,6 +695,189 @@ if (clients.lidarr) {
   );
 }
 
+// Readarr tools
+if (clients.readarr) {
+  TOOLS.push(
+    {
+      name: "readarr_get_authors",
+      description: "Get all authors in Readarr library",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "readarr_search",
+      description: "Search for authors by name in Readarr. Returns results with foreignAuthorId needed for readarr_add_author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          term: {
+            type: "string",
+            description: "Search term (author name)",
+          },
+        },
+        required: ["term"],
+      },
+    },
+    {
+      name: "readarr_search_book",
+      description: "Search for books by title or ISBN in Readarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          term: {
+            type: "string",
+            description: "Search term (book title, author name, or ISBN)",
+          },
+        },
+        required: ["term"],
+      },
+    },
+    {
+      name: "readarr_get_queue",
+      description: "Get Readarr download queue. Supports pagination with limit and offset.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          limit: {
+            type: "number",
+            description: "Maximum number of queue items to return (default: 25, max: 100)",
+          },
+          offset: {
+            type: "number",
+            description: "Number of queue items to skip before returning results (default: 0)",
+          },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "readarr_get_books",
+      description: "Get books for an author in Readarr. Shows which books are available and which are missing.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          authorId: {
+            type: "number",
+            description: "Author ID to get books for",
+          },
+        },
+        required: ["authorId"],
+      },
+    },
+    {
+      name: "readarr_trigger_book_search",
+      description: "Trigger a search for a specific book to download",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          bookId: {
+            type: "number",
+            description: "Book ID to search for",
+          },
+        },
+        required: ["bookId"],
+      },
+    },
+    {
+      name: "readarr_search_missing",
+      description: "Trigger a search for all missing books for an author",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          authorId: {
+            type: "number",
+            description: "Author ID to search missing books for",
+          },
+        },
+        required: ["authorId"],
+      },
+    },
+    {
+      name: "readarr_get_calendar",
+      description: "Get upcoming book releases from Readarr",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          days: {
+            type: "number",
+            description: "Number of days to look ahead (default: 30)",
+          },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "readarr_add_author",
+      description: "Add an author to Readarr. Use readarr_search first to find the foreignAuthorId, and readarr_get_root_folders / readarr_get_quality_profiles / readarr_get_metadata_profiles to get valid values. Use readarr_get_tags to get valid tag IDs.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          foreignAuthorId: {
+            type: "string",
+            description: "Foreign author ID (Goodreads author ID) from readarr_search results",
+          },
+          authorName: {
+            type: "string",
+            description: "Author name",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "Quality profile ID from readarr_get_quality_profiles",
+          },
+          metadataProfileId: {
+            type: "number",
+            description: "Metadata profile ID from readarr_get_metadata_profiles",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "Root folder path from readarr_get_root_folders",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the author (default: true)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of tag IDs from readarr_get_tags (optional)",
+          },
+        },
+        required: ["foreignAuthorId", "authorName", "qualityProfileId", "metadataProfileId", "rootFolderPath"],
+      },
+    },
+    {
+      name: "readarr_get_root_folders",
+      description: "Get available root folders for Readarr. Use this to find valid rootFolderPath values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "readarr_get_quality_profiles",
+      description: "Get available quality profiles for Readarr. Use this to find valid qualityProfileId values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "readarr_get_metadata_profiles",
+      description: "Get available metadata profiles for Readarr. Use this to find valid metadataProfileId values when adding an author.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    }
+  );
+}
+
 // Prowlarr tools
 if (clients.prowlarr) {
   TOOLS.push(
@@ -1080,7 +1271,7 @@ async function fetchSearchEntry(id: string): Promise<unknown> {
   throw new Error(`Unsupported or unavailable fetch target '${id}'`);
 }
 
-type QueueCapableClient = SonarrClient | RadarrClient | LidarrClient;
+type QueueCapableClient = SonarrClient | RadarrClient | LidarrClient | ReadarrClient;
 
 async function getPaginatedQueue(
   client: QueueCapableClient,
@@ -1185,7 +1376,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Quality Profiles
       case "sonarr_get_quality_profiles":
       case "radarr_get_quality_profiles":
-      case "lidarr_get_quality_profiles": {
+      case "lidarr_get_quality_profiles":
+      case "readarr_get_quality_profiles": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1219,7 +1411,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Health checks
       case "sonarr_get_health":
       case "radarr_get_health":
-      case "lidarr_get_health": {
+      case "lidarr_get_health":
+      case "readarr_get_health": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1244,7 +1437,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Root folders
       case "sonarr_get_root_folders":
       case "radarr_get_root_folders":
-      case "lidarr_get_root_folders": {
+      case "lidarr_get_root_folders":
+      case "readarr_get_root_folders": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1270,7 +1464,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Download clients
       case "sonarr_get_download_clients":
       case "radarr_get_download_clients":
-      case "lidarr_get_download_clients": {
+      case "lidarr_get_download_clients":
+      case "readarr_get_download_clients": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1299,7 +1494,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Naming config
       case "sonarr_get_naming":
       case "radarr_get_naming":
-      case "lidarr_get_naming": {
+      case "lidarr_get_naming":
+      case "readarr_get_naming": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1315,7 +1511,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Tags
       case "sonarr_get_tags":
       case "radarr_get_tags":
-      case "lidarr_get_tags": {
+      case "lidarr_get_tags":
+      case "readarr_get_tags": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1334,7 +1531,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Comprehensive setup review
       case "sonarr_review_setup":
       case "radarr_review_setup":
-      case "lidarr_review_setup": {
+      case "lidarr_review_setup":
+      case "readarr_review_setup": {
         const serviceName = name.split('_')[0] as keyof typeof clients;
         const client = clients[serviceName];
         if (!client) throw new Error(`${serviceName} not configured`);
@@ -1353,10 +1551,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           client.getIndexers(),
         ]);
 
-        // For Lidarr, also get metadata profiles
+        // For Lidarr and Readarr, also get metadata profiles
         let metadataProfiles = null;
         if (serviceName === 'lidarr' && clients.lidarr) {
           metadataProfiles = await clients.lidarr.getMetadataProfiles();
+        } else if (serviceName === 'readarr' && clients.readarr) {
+          metadataProfiles = await clients.readarr.getMetadataProfiles();
         }
 
         const review = {
@@ -1949,6 +2149,216 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      // Readarr handlers
+      case "readarr_get_authors": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const authors = await clients.readarr.getAuthors();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: authors.length,
+              authors: authors.map(a => ({
+                id: a.id,
+                authorName: a.authorName,
+                status: a.status,
+                books: a.statistics?.bookCount,
+                bookFiles: a.statistics?.bookFileCount + '/' + a.statistics?.totalBookCount,
+                sizeOnDisk: formatBytes(a.statistics?.sizeOnDisk || 0),
+                monitored: a.monitored,
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_search": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const a = args as { term?: string; query?: string; author?: string; name?: string };
+        const term = a.term ?? a.query ?? a.author ?? a.name;
+        if (!term) throw new Error("term required (author name)");
+        const results = await clients.readarr.searchAuthors(term);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: results.length,
+              results: results.slice(0, 10).map(r => ({
+                authorName: r.authorName,
+                foreignAuthorId: r.foreignAuthorId,
+                status: r.status,
+                overview: r.overview ? (r.overview.substring(0, 200) + (r.overview.length > 200 ? '...' : '')) : undefined,
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_search_book": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const b = args as { term?: string; query?: string };
+        const term = b.term ?? b.query;
+        if (!term) throw new Error("term required (book title or ISBN)");
+        const results = await clients.readarr.searchBooks(term);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: results.length,
+              results: results.slice(0, 10).map(r => ({
+                id: r.id,
+                title: r.title,
+                foreignBookId: r.foreignBookId,
+                authorId: r.authorId,
+                releaseDate: r.releaseDate,
+                pageCount: r.pageCount,
+                overview: r.overview ? (r.overview.substring(0, 200) + (r.overview.length > 200 ? '...' : '')) : undefined,
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_queue": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        return jsonText(await getPaginatedQueue(clients.readarr, args as { limit?: number; offset?: number }));
+      }
+
+      case "readarr_get_books": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const authorId = (args as { authorId: number }).authorId;
+        const books = await clients.readarr.getBooks(authorId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: books.length,
+              books: books.map(b => ({
+                id: b.id,
+                title: b.title,
+                releaseDate: b.releaseDate,
+                pageCount: b.pageCount,
+                monitored: b.monitored,
+                grabbed: b.grabbed,
+                sizeOnDisk: formatBytes(b.statistics?.sizeOnDisk || 0),
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_trigger_book_search": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const bookId = (args as { bookId: number }).bookId;
+        const result = await clients.readarr.searchBook([bookId]);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Search triggered for book`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_search_missing": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const authorId = (args as { authorId: number }).authorId;
+        const result = await clients.readarr.searchMissingBooks(authorId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Search triggered for missing books`,
+              commandId: result.id,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_calendar": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const days = (args as { days?: number })?.days || 30;
+        const start = new Date().toISOString().split('T')[0];
+        const end = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const calendar = await clients.readarr.getCalendar(start, end);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              count: calendar.length,
+              books: calendar.map(b => ({
+                id: b.id,
+                title: b.title,
+                authorId: b.authorId,
+                releaseDate: b.releaseDate,
+                pageCount: b.pageCount,
+                monitored: b.monitored,
+              })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_add_author": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const { foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags } = args as {
+          foreignAuthorId: string; authorName: string; qualityProfileId: number;
+          metadataProfileId: number; rootFolderPath: string; monitored?: boolean; tags?: number[];
+        };
+        const added = await clients.readarr.addAuthor({
+          foreignAuthorId, authorName, qualityProfileId, metadataProfileId, rootFolderPath, monitored, tags: tags ?? [],
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: `Added "${added.authorName}" to Readarr`,
+              id: added.id,
+              path: added.path,
+              monitored: added.monitored,
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_root_folders": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const folders = await clients.readarr.getRootFolders();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(folders, null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_quality_profiles": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const profiles = await clients.readarr.getQualityProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
+      case "readarr_get_metadata_profiles": {
+        if (!clients.readarr) throw new Error("Readarr not configured");
+        const profiles = await clients.readarr.getMetadataProfiles();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
+          }],
+        };
+      }
+
       // Prowlarr handlers
       case "prowlarr_get_indexers": {
         if (!clients.prowlarr) throw new Error("Prowlarr not configured");
@@ -2060,6 +2470,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             results.lidarr = { count: lidarrResults.length, results: lidarrResults.slice(0, 5) };
           } catch (e) {
             results.lidarr = { error: e instanceof Error ? e.message : String(e) };
+          }
+        }
+
+        if (clients.readarr) {
+          try {
+            const readarrResults = await clients.readarr.searchAuthors(term);
+            results.readarr = { count: readarrResults.length, results: readarrResults.slice(0, 5) };
+          } catch (e) {
+            results.readarr = { error: e instanceof Error ? e.message : String(e) };
           }
         }
 
