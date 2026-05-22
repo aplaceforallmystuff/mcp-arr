@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-05-22
+
+### Fixed
+- Fixed HTTP MCP mode failing with clients (e.g. Claude Code) that do not include `Mcp-Session-Id` in post-initialization requests by switching to a stateless per-request transport (`sessionIdGenerator: undefined`). Each POST creates a fresh transport; the shared server instance retains all registered tools between requests.
+
 ## [1.6.3] - 2026-04-27
 
 ### Fixed

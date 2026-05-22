@@ -2431,12 +2431,6 @@ function formatBytes(bytes: number): string {
 }
 
 async function startHttpServer() {
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: randomUUID,
-  });
-
-  await server.connect(transport);
-
   const httpServer = createServer(async (req, res) => {
     if (!req.url) {
       res.statusCode = 400;
@@ -2463,11 +2457,21 @@ async function startHttpServer() {
       return;
     }
 
+    // Create a fresh stateless transport per request so that MCP clients
+    // which do not include Mcp-Session-Id headers (e.g. Claude Code) work
+    // correctly. Each POST is handled independently; the shared `server`
+    // instance retains all registered tools across requests.
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
     try {
+      await server.connect(transport);
       await transport.handleRequest(req, res);
     } catch (error) {
       res.statusCode = 500;
       res.end(error instanceof Error ? error.message : String(error));
+    } finally {
+      await transport.close();
     }
   });
 
