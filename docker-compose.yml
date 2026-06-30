@@ -1,0 +1,36 @@
+# Ready-to-run Compose file for self-hosting mcp-arr in remote HTTP mode
+# (e.g. for n8n). Pulls the published image from GHCR.
+#
+# SECURITY: the HTTP MCP endpoint is UNAUTHENTICATED. The default below binds the
+# container to all interfaces (HOST=0.0.0.0) and maps port 3000 on the host.
+# Keep this on a trusted/LAN network or behind an authenticating reverse proxy —
+# do NOT expose port 3000 directly to the public internet. To restrict host access
+# to localhost only, change the port mapping to "127.0.0.1:3000:3000".
+#
+# Supply your *arr URLs and API keys via a .env file next to this compose file.
+
+services:
+  mcp-arr:
+    image: ghcr.io/aplaceforallmystuff/mcp-arr:latest
+    container_name: mcp-arr
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # HTTP transport mode
+      MCP_TRANSPORT: http
+      HOST: 0.0.0.0
+      PORT: 3000
+      MCP_PATH: /mcp
+      # Sonarr
+      SONARR_URL: ${SONARR_URL:-}
+      SONARR_API_KEY: ${SONARR_API_KEY:-}
+      # Radarr
+      RADARR_URL: ${RADARR_URL:-}
+      RADARR_API_KEY: ${RADARR_API_KEY:-}
+      # Lidarr
+      LIDARR_URL: ${LIDARR_URL:-}
+      LIDARR_API_KEY: ${LIDARR_API_KEY:-}
+      # Prowlarr
+      PROWLARR_URL: ${PROWLARR_URL:-}
+      PROWLARR_API_KEY: ${PROWLARR_API_KEY:-}

@@ -1,0 +1,204 @@
+name: Release
+
+# Builds the Docker image (-> GHCR) and the GitHub Release on every version tag.
+#
+# npm publishing is intentionally NOT automated here. It is done manually so the
+# project holds no long-lived npm token. Everything in this workflow uses the
+# per-run, auto-expiring GITHUB_TOKEN only — there is nothing to store or rotate.
+#
+# Release flow:
+#   1. bump package.json + CHANGELOG, commit
+#   2. git tag vX.Y.Z && git push --tags   (this workflow builds image + release)
+#   3. npm publish                          (manual, passkey-gated)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.6.4) — must match package.json and exist in CHANGELOG.md'
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least privilege by default; jobs elevate only what they need.
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. Validate & prepare ───────────────────────────────────────────────────
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # may create + push the tag on workflow_dispatch
+    outputs:
+      tag:     ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      major:   ${{ steps.version.outputs.major }}
+      minor:   ${{ steps.version.outputs.minor }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0   # needed to inspect existing tags
+
+      - name: Resolve and validate version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
+            TAG="v${VERSION}"
+          else
+            TAG="$REF_NAME"
+            VERSION="${TAG#v}"
+          fi
+
+          # Strict semver guard — protects the tag, the changelog match, and image tags.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$VERSION' is not a valid x.y.z semver string."
+            exit 1
+          fi
+
+          # package.json must already be bumped to this version.
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) != release version ($VERSION). Bump package.json first."
+            exit 1
+          fi
+
+          # CHANGELOG.md must carry a matching section.
+          if ! grep -Eq "^## \[${VERSION}\]" CHANGELOG.md; then
+            echo "::error::No '## [${VERSION}]' section found in CHANGELOG.md."
+            exit 1
+          fi
+
+          # On manual dispatch, create + push the tag if missing; if it exists it must point at HEAD.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              if [ "$(git rev-parse "$TAG")" != "$(git rev-parse HEAD)" ]; then
+                echo "::error::Tag $TAG already exists and does not point at HEAD. Aborting."
+                exit 1
+              fi
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag "$TAG"
+              git push origin "$TAG"
+            fi
+          fi
+
+          MAJOR="${VERSION%%.*}"
+          REST="${VERSION#*.}"
+          MINOR="${MAJOR}.${REST%.*}"
+
+          {
+            echo "tag=${TAG}"
+            echo "version=${VERSION}"
+            echo "major=${MAJOR}"
+            echo "minor=${MINOR}"
+          } >> "$GITHUB_OUTPUT"
+
+  # ── 2. Build & test gate ────────────────────────────────────────────────────
+  build-test:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: node --test
+
+  # ── 3. Docker image -> GHCR ─────────────────────────────────────────────────
+  docker:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.minor }}
+            ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.major }}
+            ghcr.io/${{ github.repository }}:latest
+          labels: |
+            org.opencontainers.image.title=mcp-arr
+            org.opencontainers.image.description=MCP server for the *arr media management suite
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 4. GitHub Release ───────────────────────────────────────────────────────
+  github-release:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Extract changelog notes
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/release_notes.md
+          if [ ! -s /tmp/release_notes.md ]; then
+            echo "::error::Empty release notes extracted for ${VERSION}."
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
