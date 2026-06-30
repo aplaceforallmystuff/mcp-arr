@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-06-30
+
+### Fixed
+- **HTTP transport no longer deadlocks behind a gateway/proxy** ([#22](https://github.com/aplaceforallmystuff/mcp-arr/pull/22), by [@rwlove](https://github.com/rwlove); fixes [#21](https://github.com/aplaceforallmystuff/mcp-arr/issues/21)). The previous implementation shared a single module-level `Server` and serialized every request through a queue, because one `Server` can only be connected to one transport at a time. The moment a streamable-HTTP client (e.g. an MCP gateway/proxy such as n8n) opened its long-lived `GET` SSE stream, that request never completed and blocked the queue permanently — every subsequent `POST` (`initialize`, `tools/list`, `tools/call`, …) hung with no response. The transport now builds a **fresh `Server` + `StreamableHTTPServerTransport` per request** (the SDK's documented stateless pattern) and tears them down on response close, so a long-lived stream can no longer block other requests. The stdio transport is unchanged. Verified: with a GET stream held open, a concurrent POST went from timing out at 8 s to returning in ~2 ms.
+
 ## [1.7.1] - 2026-06-30
 
 ### Security
