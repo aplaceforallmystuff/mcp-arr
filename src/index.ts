@@ -961,18 +961,31 @@ TOOLS.push(
   }
 );
 
-// Create server instance
-const server = new Server(
-  {
-    name: "mcp-arr",
-    version: SERVER_VERSION,
-  },
-  {
-    capabilities: {
-      tools: {},
+// Build a fresh MCP server instance with all request handlers registered.
+// The HTTP transport builds a new instance per request (see startHttpServer)
+// so concurrent / long-lived transports never share a single server. A shared
+// server can only be connected to one transport at a time, which is why the
+// old code funnelled every request through a serialized queue — and that queue
+// deadlocked the moment a streamable client opened its long-lived GET (SSE)
+// stream, since that request never completes.
+function buildServer(): Server {
+  const server = new Server(
+    {
+      name: "mcp-arr",
+      version: SERVER_VERSION,
     },
-  }
-);
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+  registerHandlers(server);
+  return server;
+}
+
+// Module-level instance used by the stdio transport (single, long-lived session).
+const server = buildServer();
 
 type SearchEntry = {
   id: string;
@@ -1200,6 +1213,10 @@ async function getPaginatedQueue(
   };
 }
 
+// Registers the MCP request handlers on a server instance. Called by
+// buildServer() for every server created (one per HTTP request, plus the
+// module-level stdio instance).
+function registerHandlers(server: Server): void {
 // Handle list tools request
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return { tools: TOOLS };
@@ -2581,6 +2598,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 });
+}
 
 // Helper function to format bytes
 function formatBytes(bytes: number): string {
@@ -2589,15 +2607,6 @@ function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Serializes HTTP request handling so the shared MCP `server` is only ever
-// connected to one transport at a time (see startHttpServer for why).
-let httpQueue: Promise<unknown> = Promise.resolve();
-function runSerialized<T>(task: () => Promise<T>): Promise<T> {
-  const result = httpQueue.then(task, task);
-  httpQueue = result.catch(() => undefined);
-  return result;
 }
 
 async function startHttpServer() {
@@ -2627,28 +2636,32 @@ async function startHttpServer() {
       return;
     }
 
-    // Stateless HTTP: a fresh transport per request, with no session id issued
-    // (sessionIdGenerator: undefined). This lets MCP clients that do not echo the
-    // Mcp-Session-Id header back — e.g. Claude Code — work, while a fresh transport
-    // per request sidesteps the SDK 1.27.x "stateless transport cannot be reused"
-    // guard. Handling is serialized because the shared `server` can only be
-    // connected to one transport at a time.
-    await runSerialized(async () => {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
-      try {
-        await server.connect(transport);
-        await transport.handleRequest(req, res);
-      } catch (error) {
-        if (!res.headersSent) {
-          res.statusCode = 500;
-          res.end(error instanceof Error ? error.message : String(error));
-        }
-      } finally {
-        await transport.close();
-      }
+    // Stateless HTTP: a fresh server + transport per request, with no session
+    // id issued (sessionIdGenerator: undefined). This lets MCP clients that do
+    // not echo the Mcp-Session-Id header back — e.g. Claude Code — work. Using a
+    // new server per request means requests are no longer serialized through a
+    // single shared server, so a long-lived GET (SSE) stream can stay open
+    // without blocking other requests. The previous shared-server + serialized
+    // queue deadlocked the moment a streamable client (e.g. a gateway/proxy)
+    // opened its GET stream — that request never completes, so every later
+    // request hung behind it.
+    const requestServer = buildServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
     });
+    res.on("close", () => {
+      void transport.close();
+      void requestServer.close();
+    });
+    try {
+      await requestServer.connect(transport);
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.end(error instanceof Error ? error.message : String(error));
+      }
+    }
   });
 
   await new Promise<void>((resolve, reject) => {
