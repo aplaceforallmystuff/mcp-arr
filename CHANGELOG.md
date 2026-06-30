@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-06-30
+
+### Security
+- Bumped `hono` from 4.12.22 to **4.12.26** ([#26](https://github.com/aplaceforallmystuff/mcp-arr/pull/26)) to clear five advisories affecting `hono <= 4.12.24`: CORS middleware reflecting any origin with credentials (GHSA-88fw-hqm2-52qc), `serve-static` path traversal via encoded backslash on Windows (GHSA-wwfh-h76j-fc44), body-limit bypass on AWS Lambda (GHSA-rv63-4mwf-qqc2), and `Set-Cookie` / repeated-header dropping in the Lambda adapters (GHSA-j6c9-x7qj-28xf, GHSA-wgpf-jwqj-8h8p). Thanks to [@acesplit](https://github.com/acesplit) (#25) for the early report.
+
 ## [1.7.0] - 2026-06-30
 
 ### Added
