@@ -290,6 +290,9 @@ The existing service-specific tools remain available for richer local or power-u
 | `radarr_get_queue` | View current download queue with `limit` and `offset` pagination |
 | `radarr_get_calendar` | See upcoming releases |
 | `radarr_search_movie` | Trigger search to download a movie in your library |
+| `radarr_search_movies` | Bulk-trigger searches for multiple movie IDs at once |
+| `radarr_update_movie` | Update a movie's quality profile, monitored status, minimum availability, tags, or path |
+| `radarr_delete_queue_item` | Remove an item from the download queue (optionally blocklist the release) |
 
 ### Lidarr Tools (Music)
 
