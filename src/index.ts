@@ -227,6 +227,20 @@ if (clients.sonarr) {
       },
     },
     {
+      name: "sonarr_get_series_by_id",
+      description: "Get detailed information for a specific TV series in Sonarr, including seasons, episodes, quality profile, statistics, and monitoring settings.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          seriesId: {
+            type: "number",
+            description: "Series ID to get details for",
+          },
+        },
+        required: ["seriesId"],
+      },
+    },
+    {
       name: "sonarr_search",
       description: "Search for TV series by name. Returns results with tvdbId needed for sonarr_add_series.",
       inputSchema: {
@@ -1567,6 +1581,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 sizeOnDisk: formatBytes(s.statistics?.sizeOnDisk || 0),
                 monitored: s.monitored,
               })),
+            }, null, 2),
+          }],
+        };
+      }
+
+      case "sonarr_get_series_by_id": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const seriesId = (args as { seriesId: number }).seriesId;
+        const series = await clients.sonarr.getSeriesById(seriesId);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              id: series.id,
+              title: series.title,
+              year: series.year,
+              status: series.status,
+              network: series.network,
+              airTime: series.airTime,
+              overview: series.overview,
+              runtime: series.runtime,
+              genres: series.genres,
+              path: series.path,
+              qualityProfileId: series.qualityProfileId,
+              monitored: series.monitored,
+              seasonFolder: series.seasonFolder,
+              tags: series.tags,
+              statistics: series.statistics,
+              seasons: series.seasons,
+              ratings: series.ratings,
+              firstAired: series.firstAired,
+              images: series.images,
             }, null, 2),
           }],
         };
