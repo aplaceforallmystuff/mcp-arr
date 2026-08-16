@@ -454,6 +454,21 @@ export class ArrClient {
   }
 
   /**
+   * Delete an item from the download queue. The v3 `/queue/{id}` endpoint is
+   * identical across Sonarr, Radarr and Lidarr, so this lives on the base
+   * client and every service inherits it.
+   */
+  async deleteQueueItem(queueId: number, options: { removeFromClient?: boolean; blocklist?: boolean } = {}): Promise<void> {
+    const params = new URLSearchParams();
+    if (options.removeFromClient) params.append('removeFromClient', 'true');
+    if (options.blocklist) params.append('blocklist', 'true');
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.request<void>(`/queue/${queueId}${query}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
    * Get calendar items (upcoming releases)
    */
   async getCalendar(start?: string, end?: string): Promise<unknown[]> {
@@ -718,19 +733,6 @@ export class RadarrClient extends ArrClient {
     return this['request']<Movie>(`/movie/${movie.id}`, {
       method: 'PUT',
       body: JSON.stringify(movie),
-    });
-  }
-
-  /**
-   * Delete an item from the download queue
-   */
-  async deleteQueueItem(queueId: number, options: { removeFromClient?: boolean; blocklist?: boolean } = {}): Promise<void> {
-    const params = new URLSearchParams();
-    if (options.removeFromClient) params.append('removeFromClient', 'true');
-    if (options.blocklist) params.append('blocklist', 'true');
-    const query = params.toString() ? `?${params.toString()}` : '';
-    await this['request']<void>(`/queue/${queueId}${query}`, {
-      method: 'DELETE',
     });
   }
 
