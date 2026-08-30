@@ -26,7 +26,7 @@ import {
   RadarrClient,
   LidarrClient,
   ProwlarrClient,
-  ArrService,
+  ArrService, Series,
 } from "./arr-client.js";
 import { trashClient, TrashService } from "./trash-client.js";
 
@@ -227,17 +227,18 @@ if (clients.sonarr) {
       },
     },
     {
-      name: "sonarr_get_series_by_id",
-      description: "Get detailed information for a specific TV series in Sonarr, including seasons, episodes, quality profile, statistics, and monitoring settings.",
+      name: "sonarr_get_series_by_ids",
+      description: "Get detailed information for one or more TV series in Sonarr (accepts an array of series IDs), including seasons, episodes, quality profile, statistics, and monitoring settings.",
       inputSchema: {
         type: "object" as const,
         properties: {
-          seriesId: {
-            type: "number",
-            description: "Series ID to get details for",
+          seriesIds: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of series IDs to get details for",
           },
         },
-        required: ["seriesId"],
+        required: ["seriesIds"],
       },
     },
     {
@@ -1227,6 +1228,34 @@ async function getPaginatedQueue(
   };
 }
 
+function createSeriesResponse(series: Series) {
+  return {
+    type: "text" as const,
+    text: JSON.stringify({
+      id: series.id,
+      title: series.title,
+      year: series.year,
+      status: series.status,
+      network: series.network,
+      airTime: series.airTime,
+      overview: series.overview,
+      runtime: series.runtime,
+      genres: series.genres,
+      path: series.path,
+      qualityProfileId: series.qualityProfileId,
+      monitored: series.monitored,
+      seasonFolder: series.seasonFolder,
+      tags: series.tags,
+      statistics: series.statistics,
+      seasons: series.seasons,
+      ratings: series.ratings,
+      firstAired: series.firstAired,
+      images: series.images,
+    }, null, 2),
+  }
+}
+
+
 // Registers the MCP request handlers on a server instance. Called by
 // buildServer() for every server created (one per HTTP request, plus the
 // module-level stdio instance).
@@ -1586,36 +1615,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "sonarr_get_series_by_id": {
+      case "sonarr_get_series_by_ids": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const seriesId = (args as { seriesId: number }).seriesId;
-        const series = await clients.sonarr.getSeriesById(seriesId);
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              id: series.id,
-              title: series.title,
-              year: series.year,
-              status: series.status,
-              network: series.network,
-              airTime: series.airTime,
-              overview: series.overview,
-              runtime: series.runtime,
-              genres: series.genres,
-              path: series.path,
-              qualityProfileId: series.qualityProfileId,
-              monitored: series.monitored,
-              seasonFolder: series.seasonFolder,
-              tags: series.tags,
-              statistics: series.statistics,
-              seasons: series.seasons,
-              ratings: series.ratings,
-              firstAired: series.firstAired,
-              images: series.images,
-            }, null, 2),
-          }],
-        };
+        const sonarr = clients.sonarr;
+        const seriesIds = (args as { seriesIds: Array<number> }).seriesIds;
+        if (!Array.isArray(seriesIds) || seriesIds.length === 0) {
+          throw new Error("seriesIds must be a non-empty array of series IDs");
+        }
+        const content = await Promise.all(
+          seriesIds.map(async (seriesId) => {
+            try {
+              return createSeriesResponse(await sonarr.getSeriesById(seriesId));
+            } catch {
+              return { type: "text" as const, text: JSON.stringify({ seriesId, error: "Series not found or request failed" }) };
+            }
+          })
+        );
+        return { content };
       }
 
       case "sonarr_search": {
