@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`sonarr_add_series` can now scope monitoring to specific seasons.** Three optional parameters: `monitor` (Sonarr add monitor mode, e.g. `firstSeason` or `none`), `seasons` (explicit per-season `{ seasonNumber, monitored }` flags), and `searchForMissingEpisodes` (defaults to `true`). Previously the tool always monitored every season and immediately searched the whole back catalogue, so a request for a single season pulled the entire series. When `seasons` is supplied without an explicit `monitor`, the client pins `addOptions.monitor` to `none` so Sonarr honours the per-season flags verbatim instead of applying its default. Because only monitored seasons are searched, pairing `searchForMissingEpisodes` with `seasons`/`monitor` limits the download to those seasons. The response now also reports `monitoredSeasons`. Fully backward compatible: with none of the new parameters, the request body Sonarr receives is unchanged.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed
