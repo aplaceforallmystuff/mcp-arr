@@ -406,6 +406,41 @@ if (clients.sonarr) {
         required: ["tvdbId", "title", "qualityProfileId", "rootFolderPath"],
       },
     },
+    {
+      name: "sonarr_update_series",
+      description: "Update a series in Sonarr. Can change qualityProfileId, monitored status, tags, or path. Fetches the full series object, applies your changes, and PUTs it back.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          seriesId: {
+            type: "number",
+            description: "Series ID to update",
+          },
+          qualityProfileId: {
+            type: "number",
+            description: "New quality profile ID (from sonarr_get_quality_profiles)",
+          },
+          monitored: {
+            type: "boolean",
+            description: "Whether to monitor the series",
+          },
+          rootFolderPath: {
+            type: "string",
+            description: "New root folder or full path for the series (alias for path)",
+          },
+          path: {
+            type: "string",
+            description: "New full path for the series",
+          },
+          tags: {
+            type: "array",
+            items: { type: "number" },
+            description: "Replace all tags with this list of tag IDs",
+          },
+        },
+        required: ["seriesId"],
+      },
+    },
   );
 }
 
@@ -1749,6 +1784,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }, null, 2),
           }],
         };
+      }
+
+      case "sonarr_update_series": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const { seriesId, qualityProfileId, monitored, rootFolderPath, path, tags } = args as {
+          seriesId: number; qualityProfileId?: number; monitored?: boolean;
+          rootFolderPath?: string; path?: string; tags?: number[];
+        };
+        if (rootFolderPath !== undefined && path !== undefined && rootFolderPath !== path) {
+          throw new Error("rootFolderPath and path must match when both are provided");
+        }
+        const series = await clients.sonarr.getSeriesById(seriesId);
+        if (qualityProfileId !== undefined) series.qualityProfileId = qualityProfileId;
+        if (monitored !== undefined) series.monitored = monitored;
+        if (tags !== undefined) series.tags = tags;
+        const updatedPath = path ?? rootFolderPath;
+        if (updatedPath !== undefined) series.path = updatedPath;
+        const updated = await clients.sonarr.updateSeries(series);
+        return jsonText({
+          success: true,
+          message: `Updated "${updated.title}" (${updated.year})`,
+          series: {
+            id: updated.id,
+            title: updated.title,
+            year: updated.year,
+            qualityProfileId: updated.qualityProfileId,
+            monitored: updated.monitored,
+            tags: updated.tags,
+            path: updated.path,
+          },
+        });
       }
 
       // Radarr handlers

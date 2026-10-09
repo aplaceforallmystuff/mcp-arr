@@ -620,6 +620,16 @@ export class SonarrClient extends ArrClient {
   }
 
   /**
+   * Update a series (PUT). Used to change qualityProfileId, monitored, tags, etc.
+   */
+  async updateSeries(series: Series): Promise<Series> {
+    return this['request']<Series>(`/series/${series.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(series),
+    });
+  }
+
+  /**
    * Trigger a search for missing episodes
    */
   async searchMissing(seriesId: number): Promise<{ id: number }> {

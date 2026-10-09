@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `sonarr_update_series` updates an existing series' quality profile, monitored status, tags, or path after fetching its full Sonarr resource.
 - `sonarr_get_language_profiles` lists the language profiles exposed by Sonarr v3.
 
 ### Fixed

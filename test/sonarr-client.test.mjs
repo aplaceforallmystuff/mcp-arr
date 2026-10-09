@@ -99,6 +99,51 @@ test("addSeries omits languageProfileId when the Sonarr v4 endpoint is unavailab
   }
 });
 
+test("updateSeries PUTs the complete series resource", async () => {
+  const original = {
+    id: 42,
+    title: "Example",
+    year: 2020,
+    path: "/tv/Example",
+    qualityProfileId: 1,
+    monitored: true,
+    tags: [2],
+  };
+  let putBody;
+  const mock = await startMockSonarr(async (req, res) => {
+    if (req.method === "GET" && req.url === "/api/v3/series/42") {
+      return sendJson(res, 200, original);
+    }
+    if (req.method === "PUT" && req.url === "/api/v3/series/42") {
+      putBody = await readJson(req);
+      return sendJson(res, 202, putBody);
+    }
+    sendJson(res, 404, { error: "not found" });
+  });
+
+  try {
+    const client = new SonarrClient({ url: mock.url, apiKey: "test-key" });
+    const series = await client.getSeriesById(42);
+    series.qualityProfileId = 5;
+    series.monitored = false;
+    series.tags = [];
+    series.path = "/new-tv/Example";
+
+    const updated = await client.updateSeries(series);
+
+    assert.deepEqual(putBody, {
+      ...original,
+      qualityProfileId: 5,
+      monitored: false,
+      tags: [],
+      path: "/new-tv/Example",
+    });
+    assert.deepEqual(updated, putBody);
+  } finally {
+    await mock.close();
+  }
+});
+
 async function startMockSonarr(handler) {
   const server = createServer((req, res) => {
     Promise.resolve(handler(req, res)).catch((error) => {
