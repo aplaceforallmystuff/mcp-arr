@@ -59,6 +59,7 @@ export interface Series {
   year: number;
   path: string;
   qualityProfileId: number;
+  languageProfileId?: number;
   seasonFolder: boolean;
   monitored: boolean;
   runtime: number;
@@ -377,6 +378,11 @@ export interface MetadataProfile {
   minPages?: number;
 }
 
+export interface LanguageProfile {
+  id: number;
+  name: string;
+}
+
 export interface SearchResult {
   title: string;
   sortTitle: string;
@@ -576,13 +582,34 @@ export class SonarrClient extends ArrClient {
   }
 
   /**
+   * Get language profiles (Sonarr v3 only; removed in Sonarr v4)
+   */
+  async getLanguageProfiles(): Promise<LanguageProfile[]> {
+    return this['request']<LanguageProfile[]>('/languageprofile');
+  }
+
+  /**
    * Add a series
    */
   async addSeries(series: Partial<Series> & { tvdbId: number; rootFolderPath: string; qualityProfileId: number }): Promise<Series> {
+    const { languageProfileId: requestedLanguageProfileId, ...seriesData } = series;
+    let languageProfileId = requestedLanguageProfileId;
+
+    if (languageProfileId === undefined) {
+      try {
+        const profiles = await this.getLanguageProfiles();
+        languageProfileId = profiles[0]?.id;
+      } catch {
+        // Sonarr v4 removed language profiles, so leave the field out when the
+        // compatibility endpoint is unavailable.
+      }
+    }
+
     return this['request']<Series>('/series', {
       method: 'POST',
       body: JSON.stringify({
-        ...series,
+        ...seriesData,
+        ...(languageProfileId !== undefined && { languageProfileId }),
         monitored: series.monitored ?? true,
         seasonFolder: series.seasonFolder ?? true,
         addOptions: {

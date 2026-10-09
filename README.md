@@ -30,7 +30,7 @@ Supports both local `stdio` mode for Claude/Codex-style clients and remote HTTP 
 
 | Category | Capabilities |
 |----------|-------------|
-| **Sonarr (TV)** | List series, view episodes, search shows, trigger downloads, check queue, view calendar, review setup |
+| **Sonarr (TV)** | List and add series; view episodes; search shows; trigger downloads; check queue; view calendar; review setup |
 | **Radarr (Movies)** | List movies, search films, trigger downloads, check queue, view releases, review setup |
 | **Lidarr (Music)** | List artists, view albums, search musicians, trigger downloads, check queue, view calendar, review setup |
 | **Prowlarr (Indexers)** | List indexers, search across all trackers, test health, view statistics |
@@ -281,9 +281,10 @@ The existing service-specific tools remain available for richer local or power-u
 |------|-------------|
 | `sonarr_get_series` | List all TV series in your library |
 | `sonarr_search` | Search for TV series by name (returns tvdbId for adding) |
-| `sonarr_add_series` | Add a TV series to Sonarr (supports tags) |
+| `sonarr_add_series` | Add a TV series to Sonarr (supports tags and Sonarr v3 language profiles) |
 | `sonarr_get_root_folders` | Get available root folders for adding series |
 | `sonarr_get_quality_profiles` | Get available quality profiles for adding series |
+| `sonarr_get_language_profiles` | Get Sonarr v3 language profiles (the endpoint was removed in Sonarr v4) |
 | `sonarr_get_queue` | View current download queue with `limit` and `offset` pagination |
 | `sonarr_get_calendar` | See upcoming episodes |
 | `sonarr_get_episodes` | List episodes for a series (shows missing vs available) |

@@ -262,6 +262,15 @@ if (clients.sonarr) {
       },
     },
     {
+      name: "sonarr_get_language_profiles",
+      description: "Get language profiles from Sonarr v3. Sonarr v4 removed language profiles, so this tool is only available when the compatibility endpoint exists.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+        required: [],
+      },
+    },
+    {
       name: "sonarr_get_queue",
       description: "Get Sonarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
@@ -371,6 +380,10 @@ if (clients.sonarr) {
           qualityProfileId: {
             type: "number",
             description: "Quality profile ID from sonarr_get_quality_profiles",
+          },
+          languageProfileId: {
+            type: "number",
+            description: "Language profile ID from sonarr_get_language_profiles (optional; Sonarr v3 defaults to the first available profile)",
           },
           rootFolderPath: {
             type: "string",
@@ -1613,6 +1626,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "sonarr_get_language_profiles": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const profiles = await clients.sonarr.getLanguageProfiles();
+        return jsonText({
+          count: profiles.length,
+          profiles: profiles.map(profile => ({ id: profile.id, name: profile.name })),
+        });
+      }
+
       case "sonarr_get_queue": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         return jsonText(await getPaginatedQueue(clients.sonarr, args as { limit?: number; offset?: number }));
@@ -1708,12 +1730,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "sonarr_add_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
+        const { tvdbId, title, qualityProfileId, languageProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
           tvdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
-          monitored?: boolean; seasonFolder?: boolean; tags?: number[];
+          languageProfileId?: number; monitored?: boolean; seasonFolder?: boolean; tags?: number[];
         };
         const added = await clients.sonarr.addSeries({
-          tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags: tags ?? [],
+          tvdbId, title, qualityProfileId, languageProfileId, rootFolderPath, monitored, seasonFolder, tags: tags ?? [],
         });
         return {
           content: [{

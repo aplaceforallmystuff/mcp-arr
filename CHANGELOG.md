@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `sonarr_get_language_profiles` lists the language profiles exposed by Sonarr v3.
+
+### Fixed
+- `sonarr_add_series` now accepts an optional `languageProfileId`. When omitted, it uses the first Sonarr v3 language profile; if the language-profile endpoint is unavailable on Sonarr v4, the field is omitted.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed
