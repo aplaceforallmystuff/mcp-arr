@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`sonarr_delete_queue_item` and `lidarr_delete_queue_item`.** Queue-item
+  removal (with optional `blocklist` and `removeFromClient`) previously existed
+  only for the movie service. The underlying `deleteQueueItem` client method
+  targets the `/queue/{id}` endpoint that is identical across all three
+  services, so it moved up to the base `ArrClient` and the TV and music
+  services now expose the same tool. Mirrors `radarr_delete_queue_item` exactly.
+
+### Changed
+- **`*_get_queue` now returns `statusMessages` and `outputPath` per item.** Both
+  fields were already fetched from the API and typed on `QueueItem`, but the
+  response formatter dropped them. `statusMessages` carries the import
+  rejection reasons (e.g. "Not an upgrade for existing episode file") — often
+  the only way to see *why* a completed download is stuck in the queue;
+  `outputPath` is the on-disk location of the download.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed
