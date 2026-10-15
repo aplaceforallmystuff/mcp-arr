@@ -408,6 +408,10 @@ The *arr application is not running or the URL is incorrect. Verify:
 ### "Sonarr/Radarr/etc not configured"
 You tried to use a tool for a service that isn't configured. Add the corresponding URL and API_KEY environment variables.
 
+## Need help building or securing MCP servers?
+
+I build and maintain MCP servers like this one, and I review AI and agent setups for security. If your team needs a custom server, an integration, or a security review of one you already run, see [jimchristian.net/work](https://jimchristian.net/work/) or book a [discovery session](https://jimchristian.net/discovery/).
+
 ## License
 
 MIT - see [LICENSE](LICENSE) for details.
