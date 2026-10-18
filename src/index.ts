@@ -356,7 +356,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_add_series",
-      description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
+      description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs. To add only specific seasons (instead of the whole series), pass `monitor` (e.g. \"firstSeason\") or an explicit `seasons` list — otherwise every season is monitored and searched.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -388,6 +388,47 @@ if (clients.sonarr) {
             type: "array",
             items: { type: "number" },
             description: "Array of tag IDs from sonarr_get_tags (optional)",
+          },
+          monitor: {
+            type: "string",
+            enum: [
+              "all",
+              "future",
+              "missing",
+              "existing",
+              "firstSeason",
+              "lastSeason",
+              "pilot",
+              "recent",
+              "monitorSpecials",
+              "none",
+            ],
+            description:
+              "How Sonarr should decide which seasons to monitor on add. Omit for Sonarr's default (all seasons). Use \"firstSeason\" to monitor only season 1, or combine with `seasons` for an arbitrary set (when `seasons` is given without `monitor`, it defaults to \"none\" so your per-season flags are honoured).",
+          },
+          seasons: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                seasonNumber: {
+                  type: "number",
+                  description: "Season number (0 = specials)",
+                },
+                monitored: {
+                  type: "boolean",
+                  description: "Whether to monitor this season",
+                },
+              },
+              required: ["seasonNumber", "monitored"],
+            },
+            description:
+              "Per-season monitoring. Provide to monitor only specific seasons, e.g. [{\"seasonNumber\":1,\"monitored\":true}]; unlisted seasons are left unmonitored. When set, Sonarr will not grab the whole series.",
+          },
+          searchForMissingEpisodes: {
+            type: "boolean",
+            description:
+              "Search for missing episodes on add (default: true). Only monitored seasons are searched, so pairing this with `seasons`/`monitor` limits the download to those seasons.",
           },
         },
         required: ["tvdbId", "title", "qualityProfileId", "rootFolderPath"],
@@ -1708,12 +1749,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "sonarr_add_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags } = args as {
+        const { tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags, monitor, seasons, searchForMissingEpisodes } = args as {
           tvdbId: number; title: string; qualityProfileId: number; rootFolderPath: string;
           monitored?: boolean; seasonFolder?: boolean; tags?: number[];
+          monitor?: string; seasons?: Array<{ seasonNumber: number; monitored: boolean }>; searchForMissingEpisodes?: boolean;
         };
         const added = await clients.sonarr.addSeries({
           tvdbId, title, qualityProfileId, rootFolderPath, monitored, seasonFolder, tags: tags ?? [],
+          monitor, seasons, searchForMissingEpisodes,
         });
         return {
           content: [{
@@ -1724,6 +1767,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               id: added.id,
               path: added.path,
               monitored: added.monitored,
+              monitoredSeasons: added.seasons?.filter((s) => s.monitored).map((s) => s.seasonNumber),
             }, null, 2),
           }],
         };

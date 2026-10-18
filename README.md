@@ -281,7 +281,7 @@ The existing service-specific tools remain available for richer local or power-u
 |------|-------------|
 | `sonarr_get_series` | List all TV series in your library |
 | `sonarr_search` | Search for TV series by name (returns tvdbId for adding) |
-| `sonarr_add_series` | Add a TV series to Sonarr (supports tags) |
+| `sonarr_add_series` | Add a TV series to Sonarr, optionally scoped to specific seasons via `monitor` / `seasons` (supports tags) |
 | `sonarr_get_root_folders` | Get available root folders for adding series |
 | `sonarr_get_quality_profiles` | Get available quality profiles for adding series |
 | `sonarr_get_queue` | View current download queue with `limit` and `offset` pagination |

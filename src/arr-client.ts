@@ -576,17 +576,41 @@ export class SonarrClient extends ArrClient {
   }
 
   /**
-   * Add a series
+   * Add a series.
+   *
+   * By default (no `monitor`, no `seasons`) the request body is identical to
+   * before: the whole series is monitored and a search for every missing
+   * episode is triggered. Pass `seasons` and/or `monitor` to scope monitoring
+   * to specific seasons so Sonarr does not grab the entire back catalogue.
    */
-  async addSeries(series: Partial<Series> & { tvdbId: number; rootFolderPath: string; qualityProfileId: number }): Promise<Series> {
+  async addSeries(
+    series: Partial<Series> & {
+      tvdbId: number;
+      rootFolderPath: string;
+      qualityProfileId: number;
+      /** Sonarr add monitor mode, e.g. "all", "firstSeason", "none". */
+      monitor?: string;
+      /** Search for missing (monitored) episodes on add. Default true. */
+      searchForMissingEpisodes?: boolean;
+    },
+  ): Promise<Series> {
+    const { monitor, searchForMissingEpisodes, ...seriesBody } = series;
+
+    // Sonarr ignores an explicit `seasons[]` list unless addOptions.monitor
+    // tells it not to apply its own default (which monitors every season).
+    // When the caller supplies per-season flags but no monitor mode, pin
+    // monitor to "none" so those flags are honoured verbatim.
+    const resolvedMonitor = monitor ?? (seriesBody.seasons ? 'none' : undefined);
+
     return this['request']<Series>('/series', {
       method: 'POST',
       body: JSON.stringify({
-        ...series,
+        ...seriesBody,
         monitored: series.monitored ?? true,
         seasonFolder: series.seasonFolder ?? true,
         addOptions: {
-          searchForMissingEpisodes: true,
+          searchForMissingEpisodes: searchForMissingEpisodes ?? true,
+          ...(resolvedMonitor ? { monitor: resolvedMonitor } : {}),
         },
       }),
     });
