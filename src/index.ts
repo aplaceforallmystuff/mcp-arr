@@ -222,6 +222,48 @@ if (clients.sonarr) addConfigTools('sonarr', 'Sonarr (TV)');
 if (clients.radarr) addConfigTools('radarr', 'Radarr (Movies)');
 if (clients.lidarr) addConfigTools('lidarr', 'Lidarr (Music)');
 
+if (clients.sonarr) {
+  TOOLS.push({
+    name: "sonarr_get_custom_formats",
+    description: "Read existing custom formats and their exact specifications; no mutations.",
+    inputSchema: { type: "object" as const, properties: {}, required: [] },
+  },
+    {
+      name: "sonarr_create_custom_format",
+      description: "Create a new custom format from explicit specifications. Defaults to dry-run; apply=true creates after user approval. Rejects duplicate names.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          name: { type: "string", description: "New custom format name" },
+          specifications: { type: "array", items: { type: "object", additionalProperties: true }, description: "Native Sonarr/Radarr custom format specifications" },
+          apply: { type: "boolean", description: "Create in service (default false)" }
+        },
+        required: ["name", "specifications"],
+      },
+    });
+}
+
+if (clients.radarr) {
+  TOOLS.push({
+    name: "radarr_get_custom_formats",
+    description: "Read existing custom formats and their exact specifications; no mutations.",
+    inputSchema: { type: "object" as const, properties: {}, required: [] },
+  },
+    {
+      name: "radarr_create_custom_format",
+      description: "Create a new custom format from explicit specifications. Defaults to dry-run; apply=true creates after user approval. Rejects duplicate names.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          name: { type: "string", description: "New custom format name" },
+          specifications: { type: "array", items: { type: "object", additionalProperties: true }, description: "Native Sonarr/Radarr custom format specifications" },
+          apply: { type: "boolean", description: "Create in service (default false)" }
+        },
+        required: ["name", "specifications"],
+      },
+    });
+}
+
 // Sonarr tools
 if (clients.sonarr) {
   TOOLS.push(
@@ -1547,6 +1589,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+      case "sonarr_get_custom_formats":
+      case "radarr_get_custom_formats": {
+        const client = name.startsWith("sonarr_") ? clients.sonarr : clients.radarr;
+        if (!client) throw new Error("Service not configured");
+        return jsonText(await client.getCustomFormats());
+      }
+      case "sonarr_create_custom_format":
+      case "radarr_create_custom_format": {
+        const client = name.startsWith("sonarr_") ? clients.sonarr : clients.radarr;
+        if (!client) throw new Error("Service not configured");
+        const input = args as { name: string; specifications: Array<Record<string, unknown>>; apply?: boolean };
+        if (typeof input?.name !== "string" || !input.name.trim() || input.name.length > 100 ||
+          !Array.isArray(input.specifications) || !input.specifications.length ||
+          input.specifications.length > 20 || input.specifications.some(v => !v || typeof v !== "object" || Array.isArray(v)) ||
+          (input.apply !== undefined && typeof input.apply !== "boolean")) return textError("Invalid custom format");
+        return jsonText(await client.createCustomFormat({ name: input.name, specifications: input.specifications }, input.apply === true));
+      }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { limit = 25, offset = 0, search } = args as {
@@ -2612,7 +2671,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const newTools = ["sonarr_get_custom_formats", "radarr_get_custom_formats", "sonarr_create_custom_format", "radarr_create_custom_format"];
+    const errorMessage = newTools.includes(name) && /API error:|fetch failed/i.test(rawMessage)
+      ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
       content: [{ type: "text", text: `Error: ${errorMessage}` }],
       isError: true,

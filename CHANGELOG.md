@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add Sonarr and Radarr custom format inspection and creation. Read native custom-format specifications and preview creation. Explicit apply=true creates a format; duplicate names are rejected case-insensitively. Native specifications are validated by the configured service on apply.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

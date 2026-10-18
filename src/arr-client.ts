@@ -397,6 +397,20 @@ export interface SearchResult {
 }
 
 export class ArrClient {
+  async getCustomFormats(): Promise<Array<Record<string, unknown> & { id: number; name: string }>> {
+    return this.request<Array<Record<string, unknown> & { id: number; name: string }>>('/customformat');
+  }
+
+  async createCustomFormat(input: { name: string; specifications: Array<Record<string, unknown>> }, apply: boolean): Promise<unknown> {
+    const existing = await this.getCustomFormats();
+    if (existing.some(f => f.name.toLowerCase() === input.name.toLowerCase())) {
+      throw new Error('A custom format with this name already exists');
+    }
+    const payload = { name: input.name, includeCustomFormatWhenRenaming: false, specifications: input.specifications };
+    if (!apply) return { applied: false, proposed: payload, existingNames: existing.map(x => x.name) };
+    return { applied: true, created: await this.request<unknown>('/customformat', { method: 'POST', body: JSON.stringify(payload) }) };
+  }
+
   private config: ArrConfig;
   private serviceName: ArrService;
   protected apiVersion: string = 'v3';

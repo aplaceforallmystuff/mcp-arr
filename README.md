@@ -266,6 +266,15 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add Sonarr and Radarr custom format inspection and creation
+
+Read native custom-format specifications and preview creation. Explicit apply=true creates a format; duplicate names are rejected case-insensitively. Native specifications are validated by the configured service on apply.
+
+- `sonarr_get_custom_formats`
+- `radarr_get_custom_formats`
+- `sonarr_create_custom_format`
+- `radarr_create_custom_format`
+
 ### General Tools
 
 | Tool | Description |
