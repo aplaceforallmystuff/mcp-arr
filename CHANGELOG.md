@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add guarded Radarr manual import and command status tools. Inspect a folder or download ID, then submit explicitly selected files through the Radarr ManualImport command. Re-scans before submission and checks exact path, movie, size, known quality/languages and acknowledged rejection reasons. Requires confirmed=true and an explicit auto/copy/move mode. Radarr may replace existing library files; copy preserves the download source. A returned command is not proof of import: check its status and resulting library file before retrying.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

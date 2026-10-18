@@ -266,6 +266,14 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add guarded Radarr manual import and command status tools
+
+Inspect a folder or download ID, then submit explicitly selected files through the Radarr ManualImport command. Re-scans before submission and checks exact path, movie, size, known quality/languages and acknowledged rejection reasons. Requires confirmed=true and an explicit auto/copy/move mode. Radarr may replace existing library files; copy preserves the download source. A returned command is not proof of import: check its status and resulting library file before retrying.
+
+- `radarr_get_manual_import_candidates`
+- `radarr_manual_import`
+- `radarr_get_command`
+
 ### General Tools
 
 | Tool | Description |
