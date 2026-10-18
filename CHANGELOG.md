@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add previewable Sonarr and Radarr quality profile updates. Preview limited profile changes by default. Applying requires apply=true and the exact expected profile name. Returns the complete original profile for recovery and preserves fields outside the patch, including quality ordering. Existing custom formats can be linked and scored; no new formats are created.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

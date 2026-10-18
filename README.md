@@ -266,6 +266,13 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add previewable Sonarr and Radarr quality profile updates
+
+Preview limited profile changes by default. Applying requires apply=true and the exact expected profile name. Returns the complete original profile for recovery and preserves fields outside the patch, including quality ordering. Existing custom formats can be linked and scored; no new formats are created.
+
+- `sonarr_update_quality_profile`
+- `radarr_update_quality_profile`
+
 ### General Tools
 
 | Tool | Description |
