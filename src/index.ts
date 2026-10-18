@@ -222,6 +222,28 @@ if (clients.sonarr) addConfigTools('sonarr', 'Sonarr (TV)');
 if (clients.radarr) addConfigTools('radarr', 'Radarr (Movies)');
 if (clients.lidarr) addConfigTools('lidarr', 'Lidarr (Music)');
 
+if (clients.sonarr) {
+  TOOLS.push({
+    name: "sonarr_grab_release",
+    description: "Manually grab one specifically approved Sonarr release, with exact acknowledgement required to override cutoff/not-an-upgrade rejections. Causes a download; call only after user explicitly approves the exact release. Revalidates release against current interactive search.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        episodeId: { type: "number", description: "Sonarr episode ID" },
+        indexerId: { type: "number", description: "Indexer ID returned by sonarr_get_episode_releases" },
+        guid: { type: "string", description: "Exact release GUID returned by sonarr_get_episode_releases" },
+        acknowledgedRejections: { type: "array", items: { type: "string" }, description: "Exact current cutoff/not-an-upgrade reasons explicitly approved for override" },
+        confirmed: { type: "boolean", description: "True only after the user approves grabbing this exact release" },
+      },
+      required: ["episodeId", "indexerId", "guid", "confirmed"],
+    },
+  });
+}
+
+if (clients.radarr) {
+  TOOLS.push({ name: "radarr_grab_release", description: "Grab an explicitly approved exact Radarr release; revalidate availability and require exact acknowledgement of cutoff/not-an-upgrade rejections. Substantive rejections are refused", inputSchema: { type: "object" as const, properties: { movieId: { type: 'number' }, indexerId: { type: 'number' }, guid: { type: 'string' }, confirmed: { type: 'boolean' }, acknowledgedRejections: { type: 'array', items: { type: 'string' } } }, required: ["movieId", "indexerId", "guid", "confirmed"] } });
+}
+
 // Sonarr tools
 if (clients.sonarr) {
   TOOLS.push(
@@ -1547,6 +1569,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+      case "sonarr_grab_release": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const input = args as { episodeId: number; indexerId: number; guid: string; confirmed: boolean; acknowledgedRejections?: string[] };
+        if (!Number.isSafeInteger(input?.episodeId) || input.episodeId <= 0 ||
+          !Number.isSafeInteger(input?.indexerId) || input.indexerId <= 0 ||
+          typeof input?.guid !== "string" || !input.guid.trim() || input.guid.length > 2048) {
+          return textError("Valid episodeId, indexerId and release guid are required");
+        }
+        if (input.acknowledgedRejections !== undefined && (!Array.isArray(input.acknowledgedRejections) || input.acknowledgedRejections.some(r => typeof r !== 'string'))) return textError('Invalid acknowledgedRejections');
+        if (input.confirmed !== true) {
+          return textError("Explicit user approval is required before grabbing a release");
+        }
+        const result = await clients.sonarr.grabEpisodeRelease(input.episodeId, input.indexerId, input.guid, input.acknowledgedRejections);
+        return jsonText({ grabbed: true, episodeId: input.episodeId, result });
+      }
+      case "radarr_grab_release": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const v = args as { movieId: number; indexerId: number; guid: string; confirmed: boolean; acknowledgedRejections?: string[] };
+        if (!Number.isSafeInteger(v?.movieId) || v.movieId <= 0 || !Number.isSafeInteger(v?.indexerId) || v.indexerId <= 0 || typeof v?.guid !== "string" || !v.guid.trim() || v.guid.length > 2048) return textError("Invalid movieId, indexerId or guid");
+        if (v.acknowledgedRejections !== undefined && (!Array.isArray(v.acknowledgedRejections) || v.acknowledgedRejections.some(r => typeof r !== 'string'))) return textError('Invalid acknowledgedRejections');
+        if (v.confirmed !== true) return textError("Explicit user approval required");
+        const result = await clients.radarr.grabMovieRelease(v.movieId, v.indexerId, v.guid, v.acknowledgedRejections);
+        return jsonText({ grabbed: true, movieId: v.movieId, result });
+      }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { limit = 25, offset = 0, search } = args as {
@@ -2612,7 +2658,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const newTools = ["sonarr_grab_release", "radarr_grab_release"];
+    const errorMessage = newTools.includes(name) && /API error:|fetch failed/i.test(rawMessage)
+      ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
       content: [{ type: "text", text: `Error: ${errorMessage}` }],
       isError: true,

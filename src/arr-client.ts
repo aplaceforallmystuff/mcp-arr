@@ -550,6 +550,24 @@ export class ArrClient {
 // Service-specific clients
 
 export class SonarrClient extends ArrClient {
+  async grabEpisodeRelease(episodeId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?episodeId=${episodeId}`);
+    const release = releases.find(r => r.indexerId === indexerId && r.guid === guid);
+    if (!release) throw new Error("Selected release is no longer available for this episode");
+    const reasons = release.rejections ?? [];
+    const preferenceOnly = (reason: string) => /^(Existing file meets cutoff|Not an upgrade)(?:\b|:)/i.test(reason);
+    if ((release.rejected && reasons.length === 0) ||
+      reasons.some(reason => !preferenceOnly(reason) || !acknowledgedRejections.includes(reason)) ||
+      acknowledgedRejections.some(reason => !reasons.includes(reason))) {
+      throw new Error("Release rejections are substantive, unacknowledged, or changed; inspect current results");
+    }
+    if (release.downloadAllowed === false) throw new Error("Sonarr reports that this release cannot be downloaded");
+    return this['request']<unknown>('/release', {
+      method: 'POST',
+      body: JSON.stringify({ guid, indexerId }),
+    });
+  }
+
   constructor(config: ArrConfig) {
     super('sonarr', config);
   }
@@ -644,6 +662,21 @@ export class SonarrClient extends ArrClient {
 }
 
 export class RadarrClient extends ArrClient {
+  async grabMovieRelease(movieId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?movieId=${movieId}`);
+    const release = releases.find(r => r.indexerId === indexerId && r.guid === guid);
+    if (!release) throw new Error("Selected release is no longer available for this movie");
+    const reasons = release.rejections ?? [];
+    const preferenceOnly = (reason: string) => /^(Existing file meets cutoff|Not an upgrade)(?:\b|:)/i.test(reason);
+    if ((release.rejected && reasons.length === 0) ||
+      reasons.some(reason => !preferenceOnly(reason) || !acknowledgedRejections.includes(reason)) ||
+      acknowledgedRejections.some(reason => !reasons.includes(reason))) {
+      throw new Error("Release rejections are substantive, unacknowledged, or changed; inspect current results");
+    }
+    if (release.downloadAllowed === false) throw new Error("Radarr reports that this release cannot be downloaded");
+    return this['request']<unknown>('/release', { method: 'POST', body: JSON.stringify({ guid, indexerId }) });
+  }
+
   constructor(config: ArrConfig) {
     super('radarr', config);
   }

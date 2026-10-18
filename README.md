@@ -266,6 +266,13 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add confirmation-gated exact release grabs
+
+Submit an explicitly approved indexer ID and GUID for a specific episode or movie. Revalidates the exact release against current interactive results. Requires confirmed=true; never retries automatically after an ambiguous submission. Substantive rejections are refused. Cutoff/not-an-upgrade rejections can be overridden only by supplying their exact current strings in acknowledgedRejections; changed reasons require a fresh review.
+
+- `sonarr_grab_release`
+- `radarr_grab_release`
+
 ### General Tools
 
 | Tool | Description |

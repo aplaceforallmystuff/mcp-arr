@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add confirmation-gated exact release grabs. Submit an explicitly approved indexer ID and GUID for a specific episode or movie. Revalidates the exact release against current interactive results. Requires confirmed=true; never retries automatically after an ambiguous submission. Substantive rejections are refused. Cutoff/not-an-upgrade rejections can be overridden only by supplying their exact current strings in acknowledgedRejections; changed reasons require a fresh review.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed
