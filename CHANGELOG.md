@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add Sonarr and Radarr file metadata tools. Inspect existing episode and movie files with paginated summary or full MediaInfo responses. Defaults to 25 records; limit is capped at 100. No media files are opened or changed.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

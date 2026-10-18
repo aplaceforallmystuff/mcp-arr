@@ -396,6 +396,25 @@ export interface SearchResult {
   disambiguation?: string;
 }
 
+export interface SonarrEpisodeFile {
+  id: number;
+  seriesId: number;
+  seasonNumber: number;
+  relativePath: string;
+  size: number;
+  sceneName?: string;
+  releaseGroup?: string;
+  quality?: { quality?: { name?: string; resolution?: number } };
+  mediaInfo?: Record<string, unknown>;
+}
+
+export interface RadarrMovieFile {
+  id: number; movieId: number; relativePath: string; size: number;
+  sceneName?: string; releaseGroup?: string;
+  quality?: { quality?: { name?: string; resolution?: number } };
+  mediaInfo?: Record<string, unknown>;
+}
+
 export class ArrClient {
   private config: ArrConfig;
   private serviceName: ArrService;
@@ -550,6 +569,10 @@ export class ArrClient {
 // Service-specific clients
 
 export class SonarrClient extends ArrClient {
+  async getEpisodeFiles(seriesId: number): Promise<SonarrEpisodeFile[]> {
+    return this['request']<SonarrEpisodeFile[]>(`/episodefile?seriesId=${seriesId}`);
+  }
+
   constructor(config: ArrConfig) {
     super('sonarr', config);
   }
@@ -644,6 +667,10 @@ export class SonarrClient extends ArrClient {
 }
 
 export class RadarrClient extends ArrClient {
+  async getMovieFiles(movieId: number): Promise<RadarrMovieFile[]> {
+    return this['request']<RadarrMovieFile[]>(`/moviefile?movieId=${movieId}`);
+  }
+
   constructor(config: ArrConfig) {
     super('radarr', config);
   }
