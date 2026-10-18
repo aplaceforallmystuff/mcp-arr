@@ -396,6 +396,26 @@ export interface SearchResult {
   disambiguation?: string;
 }
 
+export interface SonarrRelease {
+  guid?: string;
+  indexerId?: number;
+  title?: string;
+  size?: number;
+  indexer?: string;
+  protocol?: string;
+  quality?: { quality?: { name?: string; resolution?: number } };
+  languages?: Array<{ name?: string }>;
+  rejected?: boolean;
+  rejections?: string[];
+  customFormatScore?: number;
+  seeders?: number;
+  leechers?: number;
+  age?: number;
+  downloadAllowed?: boolean;
+}
+
+export interface RadarrRelease extends SonarrRelease { }
+
 export class ArrClient {
   private config: ArrConfig;
   private serviceName: ArrService;
@@ -550,6 +570,10 @@ export class ArrClient {
 // Service-specific clients
 
 export class SonarrClient extends ArrClient {
+  async getEpisodeReleases(episodeId: number): Promise<SonarrRelease[]> {
+    return this['request']<SonarrRelease[]>(`/release?episodeId=${episodeId}`);
+  }
+
   constructor(config: ArrConfig) {
     super('sonarr', config);
   }
@@ -644,6 +668,10 @@ export class SonarrClient extends ArrClient {
 }
 
 export class RadarrClient extends ArrClient {
+  async getMovieReleases(movieId: number): Promise<RadarrRelease[]> {
+    return this['request']<RadarrRelease[]>(`/release?movieId=${movieId}`);
+  }
+
   constructor(config: ArrConfig) {
     super('radarr', config);
   }

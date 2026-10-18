@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Add read-only Sonarr and Radarr release inspection. Inspect interactive indexer results without downloading. Responses include exact release identifiers, sizes, languages, quality, availability and rejection reasons. Pagination limits returned results, not the indexer search itself.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

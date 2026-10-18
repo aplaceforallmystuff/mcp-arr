@@ -222,6 +222,26 @@ if (clients.sonarr) addConfigTools('sonarr', 'Sonarr (TV)');
 if (clients.radarr) addConfigTools('radarr', 'Radarr (Movies)');
 if (clients.lidarr) addConfigTools('lidarr', 'Lidarr (Music)');
 
+if (clients.sonarr) {
+  TOOLS.push({
+    name: "sonarr_get_episode_releases",
+    description: "Read-only interactive Sonarr indexer search for alternative releases of an episode; does not grab or download. Returns compact release details and rejection reasons.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        episodeId: { type: "number", description: "Sonarr episode ID (not episode-file ID)" },
+        limit: { type: "number", description: "Maximum results (default 25, max 100)" },
+        offset: { type: "number", description: "Results to skip (default 0)" },
+      },
+      required: ["episodeId"],
+    },
+  });
+}
+
+if (clients.radarr) {
+  TOOLS.push({ name: "radarr_get_movie_releases", description: "Read-only interactive Radarr release search; no downloads", inputSchema: { type: "object" as const, properties: { movieId: { type: 'number' }, limit: { type: 'number' }, offset: { type: 'number' } }, required: ["movieId"] } });
+}
+
 // Sonarr tools
 if (clients.sonarr) {
   TOOLS.push(
@@ -1547,6 +1567,56 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+      case "sonarr_get_episode_releases": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const input = args as { episodeId: number; limit?: number; offset?: number };
+        if (!Number.isSafeInteger(input?.episodeId) || input.episodeId <= 0) {
+          return textError("episodeId must be a positive integer");
+        }
+        const limit = input.limit ?? 25;
+        const offset = input.offset ?? 0;
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isSafeInteger(offset) || offset < 0) {
+          return textError("limit must be 1-100 and offset must be a non-negative integer");
+        }
+        const releases = await clients.sonarr.getEpisodeReleases(input.episodeId);
+        const page = releases.slice(offset, offset + limit);
+        return jsonText({
+          episodeId: input.episodeId,
+          total: releases.length,
+          returned: page.length,
+          offset,
+          hasMore: offset + page.length < releases.length,
+          nextOffset: offset + page.length < releases.length ? offset + page.length : null,
+          releases: page.map(release => ({
+            title: release.title ?? null,
+            guid: release.guid ?? null,
+            indexerId: release.indexerId ?? null,
+            sizeBytes: release.size ?? null,
+            quality: release.quality?.quality?.name ?? null,
+            resolution: release.quality?.quality?.resolution ?? null,
+            indexer: release.indexer ?? null,
+            protocol: release.protocol ?? null,
+            languages: release.languages?.map(l => l.name).filter(Boolean) ?? [],
+            rejected: release.rejected ?? false,
+            rejections: release.rejections ?? [],
+            customFormatScore: release.customFormatScore ?? null,
+            seeders: release.seeders ?? null,
+            leechers: release.leechers ?? null,
+            ageDays: release.age ?? null,
+            downloadAllowed: release.downloadAllowed ?? null,
+          })),
+        });
+      }
+      case "radarr_get_movie_releases": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const v = args as { movieId: number; limit?: number; offset?: number };
+        if (!Number.isSafeInteger(v?.movieId) || v.movieId <= 0) return textError("Invalid movieId");
+        const limit = v.limit ?? 25, offset = v.offset ?? 0;
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 || !Number.isSafeInteger(offset) || offset < 0) return textError("Invalid pagination");
+        const all = await clients.radarr.getMovieReleases(v.movieId), page = all.slice(offset, offset + limit);
+        return jsonText({ movieId: v.movieId, total: all.length, offset, returned: page.length, hasMore: offset + page.length < all.length, releases: page.map(x => ({ title: x.title ?? null, guid: x.guid ?? null, indexerId: x.indexerId ?? null, sizeBytes: x.size ?? null, quality: x.quality?.quality?.name ?? null, resolution: x.quality?.quality?.resolution ?? null, indexer: x.indexer ?? null, protocol: x.protocol ?? null, languages: x.languages?.map(l => l.name).filter(Boolean) ?? [], rejected: x.rejected ?? false, rejections: x.rejections ?? [], customFormatScore: x.customFormatScore ?? null, seeders: x.seeders ?? null, leechers: x.leechers ?? null, ageDays: x.age ?? null, downloadAllowed: x.downloadAllowed ?? null })) });
+      }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { limit = 25, offset = 0, search } = args as {
@@ -2612,7 +2682,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const newTools = ["sonarr_get_episode_releases", "radarr_get_movie_releases"];
+    const errorMessage = newTools.includes(name) && /API error:|fetch failed/i.test(rawMessage)
+      ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
       content: [{ type: "text", text: `Error: ${errorMessage}` }],
       isError: true,

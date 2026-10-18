@@ -266,6 +266,13 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add read-only Sonarr and Radarr release inspection
+
+Inspect interactive indexer results without downloading. Responses include exact release identifiers, sizes, languages, quality, availability and rejection reasons. Pagination limits returned results, not the indexer search itself.
+
+- `sonarr_get_episode_releases`
+- `radarr_get_movie_releases`
+
 ### General Tools
 
 | Tool | Description |
