@@ -266,6 +266,10 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Expose download diagnostics in paginated queue responses
+
+Include statusMessages, downloadId, outputPath, sizeBytes and sizeLeftBytes in existing paginated queue responses. These fields help distinguish failed downloads from completed downloads awaiting import. Queue absence alone does not establish success or failure. Output paths refer to the configured server filesystem.
+
 ### General Tools
 
 | Tool | Description |

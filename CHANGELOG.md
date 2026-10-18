@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Expose download diagnostics in paginated queue responses. Include statusMessages, downloadId, outputPath, sizeBytes and sizeLeftBytes in existing paginated queue responses. These fields help distinguish failed downloads from completed downloads awaiting import. Queue absence alone does not establish success or failure. Output paths refer to the configured server filesystem.
+
 ## [1.7.3] - 2026-07-29
 
 ### Fixed

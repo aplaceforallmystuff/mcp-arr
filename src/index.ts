@@ -1221,6 +1221,11 @@ async function getPaginatedQueue(
     protocol: q.protocol,
     trackedDownloadStatus: q.trackedDownloadStatus,
     trackedDownloadState: q.trackedDownloadState,
+    statusMessages: q.statusMessages ?? [],
+    downloadId: q.downloadId,
+    outputPath: q.outputPath,
+    sizeBytes: q.size,
+    sizeLeftBytes: q.sizeleft,
   }));
 
   return {
@@ -1547,6 +1552,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { limit = 25, offset = 0, search } = args as {
