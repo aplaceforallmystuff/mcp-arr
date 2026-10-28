@@ -19,6 +19,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
+  ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
@@ -101,11 +102,28 @@ for (const service of configuredServices) {
   }
 }
 
+// Tool annotations (MCP ToolAnnotations hints). Every tool declares one of
+// these so clients can tell lookups apart from tools that change state, e.g.
+// to auto-approve read-only calls. All tools talk to the *arr services or
+// TRaSH Guides, so openWorldHint is always true.
+const READ_ONLY: ToolAnnotations = { readOnlyHint: true, openWorldHint: true };
+// Queues an indexer search command; may grab and download releases.
+const TRIGGERS_SEARCH: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
+// Queues a metadata refresh or indexer test; repeating it has no further effect.
+const TRIGGERS_REFRESH: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true };
+// Adds new media to the library (optionally starting a search).
+const ADDS_MEDIA: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
+// Overwrites existing settings on a library item.
+const OVERWRITES: ToolAnnotations = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true };
+// Removes an item (and optionally blocklists the release).
+const DELETES: ToolAnnotations = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true };
+
 // Build tools based on configured services
 const TOOLS: Tool[] = [
   // General tool available for all
   {
     name: "arr_status",
+    annotations: READ_ONLY,
     description: configuredServices.length > 0
       ? `Get status of all configured *arr services. Currently configured: ${configuredServices.map(s => s.displayName).join(', ')}`
       : "Get status of all supported *arr services. No local *arr services are currently configured, but TRaSH reference tools remain available.",
@@ -117,6 +135,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "search",
+    annotations: READ_ONLY,
     description: "Search across configured *arr libraries plus TRaSH Guides reference profiles. This is the primary discovery tool for remote MCP clients such as ChatGPT.",
     inputSchema: {
       type: "object" as const,
@@ -131,6 +150,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "fetch",
+    annotations: READ_ONLY,
     description: "Fetch a specific item returned by search. Accepts an opaque item id from the search tool.",
     inputSchema: {
       type: "object" as const,
@@ -153,6 +173,7 @@ function addConfigTools(serviceName: string, displayName: string) {
   TOOLS.push(
     {
       name: `${serviceName}_get_quality_profiles`,
+      annotations: READ_ONLY,
       description: `Get detailed quality profiles from ${displayName}. Shows allowed qualities, upgrade settings, and custom format scores.`,
       inputSchema: {
         type: "object" as const,
@@ -162,6 +183,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_get_health`,
+      annotations: READ_ONLY,
       description: `Get health check warnings and issues from ${displayName}. Shows any problems detected by the application.`,
       inputSchema: {
         type: "object" as const,
@@ -171,6 +193,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_get_root_folders`,
+      annotations: READ_ONLY,
       description: `Get root folders and storage info from ${displayName}. Shows paths, free space, and unmapped folders.`,
       inputSchema: {
         type: "object" as const,
@@ -180,6 +203,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_get_download_clients`,
+      annotations: READ_ONLY,
       description: `Get download client configurations from ${displayName}. Shows configured clients and their settings.`,
       inputSchema: {
         type: "object" as const,
@@ -189,6 +213,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_get_naming`,
+      annotations: READ_ONLY,
       description: `Get file naming configuration from ${displayName}. Shows naming patterns for files and folders.`,
       inputSchema: {
         type: "object" as const,
@@ -198,6 +223,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_get_tags`,
+      annotations: READ_ONLY,
       description: `Get all tags defined in ${displayName}. Tags can be used to organize and filter content.`,
       inputSchema: {
         type: "object" as const,
@@ -207,6 +233,7 @@ function addConfigTools(serviceName: string, displayName: string) {
     },
     {
       name: `${serviceName}_review_setup`,
+      annotations: READ_ONLY,
       description: `Get comprehensive configuration review for ${displayName}. Returns all settings for analysis: quality profiles, download clients, naming, storage, indexers, health warnings, and more. Use this to analyze the setup and suggest improvements.`,
       inputSchema: {
         type: "object" as const,
@@ -227,6 +254,7 @@ if (clients.sonarr) {
   TOOLS.push(
     {
       name: "sonarr_get_series",
+      annotations: READ_ONLY,
       description: "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
@@ -249,6 +277,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_search",
+      annotations: READ_ONLY,
       description: "Search for TV series by name. Returns results with tvdbId needed for sonarr_add_series.",
       inputSchema: {
         type: "object" as const,
@@ -263,6 +292,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_get_queue",
+      annotations: READ_ONLY,
       description: "Get Sonarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
@@ -281,6 +311,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_get_calendar",
+      annotations: READ_ONLY,
       description: "Get upcoming TV episodes from Sonarr",
       inputSchema: {
         type: "object" as const,
@@ -295,6 +326,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_get_episodes",
+      annotations: READ_ONLY,
       description: "Get episodes for a TV series. Shows which episodes are available and which are missing.",
       inputSchema: {
         type: "object" as const,
@@ -313,6 +345,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_search_missing",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search for all missing episodes in a series",
       inputSchema: {
         type: "object" as const,
@@ -327,6 +360,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_search_episode",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search for specific episode(s)",
       inputSchema: {
         type: "object" as const,
@@ -342,6 +376,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_refresh_series",
+      annotations: TRIGGERS_REFRESH,
       description: "Trigger a metadata refresh for a specific series in Sonarr",
       inputSchema: {
         type: "object" as const,
@@ -356,6 +391,7 @@ if (clients.sonarr) {
     },
     {
       name: "sonarr_add_series",
+      annotations: ADDS_MEDIA,
       description: "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
@@ -401,6 +437,7 @@ if (clients.radarr) {
   TOOLS.push(
     {
       name: "radarr_get_movies",
+      annotations: READ_ONLY,
       description: "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
@@ -423,6 +460,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_search",
+      annotations: READ_ONLY,
       description: "Search for movies by name. Returns results with tmdbId needed for radarr_add_movie.",
       inputSchema: {
         type: "object" as const,
@@ -437,6 +475,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_get_queue",
+      annotations: READ_ONLY,
       description: "Get Radarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
@@ -455,6 +494,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_get_calendar",
+      annotations: READ_ONLY,
       description: "Get upcoming movie releases from Radarr",
       inputSchema: {
         type: "object" as const,
@@ -469,6 +509,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_search_movie",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search to download a movie that's already in your library",
       inputSchema: {
         type: "object" as const,
@@ -483,6 +524,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_refresh_movie",
+      annotations: TRIGGERS_REFRESH,
       description: "Trigger a metadata refresh for a specific movie in Radarr",
       inputSchema: {
         type: "object" as const,
@@ -497,6 +539,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_add_movie",
+      annotations: ADDS_MEDIA,
       description: "Add a movie to Radarr. Use radarr_search first to find the tmdbId, and radarr_get_root_folders / radarr_get_quality_profiles to get valid values. Use radarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
@@ -537,6 +580,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_update_movie",
+      annotations: OVERWRITES,
       description: "Update a movie in Radarr. Can change qualityProfileId, monitored status, minimumAvailability, tags, and path. Fetches the full movie object, applies your changes, and PUTs it back.",
       inputSchema: {
         type: "object" as const,
@@ -573,6 +617,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_delete_queue_item",
+      annotations: DELETES,
       description: "Remove an item from the Radarr download queue. Use radarr_get_queue to find queue item IDs. Can optionally blocklist the release to prevent re-grabbing.",
       inputSchema: {
         type: "object" as const,
@@ -595,6 +640,7 @@ if (clients.radarr) {
     },
     {
       name: "radarr_search_movies",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search for multiple movies at once. Accepts an array of movie IDs. Use this for bulk upgrade requests instead of calling radarr_search_movie one at a time.",
       inputSchema: {
         type: "object" as const,
@@ -616,6 +662,7 @@ if (clients.lidarr) {
   TOOLS.push(
     {
       name: "lidarr_get_artists",
+      annotations: READ_ONLY,
       description: "Get all artists in Lidarr library",
       inputSchema: {
         type: "object" as const,
@@ -625,6 +672,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_search",
+      annotations: READ_ONLY,
       description: "Search for artists by name. Returns results with foreignArtistId needed for lidarr_add_artist.",
       inputSchema: {
         type: "object" as const,
@@ -639,6 +687,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_queue",
+      annotations: READ_ONLY,
       description: "Get Lidarr download queue. Supports pagination with limit and offset.",
       inputSchema: {
         type: "object" as const,
@@ -657,6 +706,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_albums",
+      annotations: READ_ONLY,
       description: "Get albums for an artist in Lidarr. Shows which albums are available and which are missing.",
       inputSchema: {
         type: "object" as const,
@@ -671,6 +721,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_search_album",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search for a specific album to download",
       inputSchema: {
         type: "object" as const,
@@ -685,6 +736,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_search_missing",
+      annotations: TRIGGERS_SEARCH,
       description: "Trigger a search for all missing albums for an artist",
       inputSchema: {
         type: "object" as const,
@@ -699,6 +751,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_calendar",
+      annotations: READ_ONLY,
       description: "Get upcoming album releases from Lidarr",
       inputSchema: {
         type: "object" as const,
@@ -713,6 +766,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_add_artist",
+      annotations: ADDS_MEDIA,
       description: "Add an artist to Lidarr. Use lidarr_search first to find the foreignArtistId, and lidarr_get_root_folders / lidarr_get_quality_profiles / lidarr_get_metadata_profiles to get valid values. Use lidarr_get_tags to get valid tag IDs.",
       inputSchema: {
         type: "object" as const,
@@ -752,6 +806,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_root_folders",
+      annotations: READ_ONLY,
       description: "Get available root folders for Lidarr. Use this to find valid rootFolderPath values when adding an artist.",
       inputSchema: {
         type: "object" as const,
@@ -761,6 +816,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_quality_profiles",
+      annotations: READ_ONLY,
       description: "Get available quality profiles for Lidarr. Use this to find valid qualityProfileId values when adding an artist.",
       inputSchema: {
         type: "object" as const,
@@ -770,6 +826,7 @@ if (clients.lidarr) {
     },
     {
       name: "lidarr_get_metadata_profiles",
+      annotations: READ_ONLY,
       description: "Get available metadata profiles for Lidarr. Use this to find valid metadataProfileId values when adding an artist.",
       inputSchema: {
         type: "object" as const,
@@ -785,6 +842,7 @@ if (clients.prowlarr) {
   TOOLS.push(
     {
       name: "prowlarr_get_indexers",
+      annotations: READ_ONLY,
       description: "Get all configured indexers in Prowlarr",
       inputSchema: {
         type: "object" as const,
@@ -794,6 +852,7 @@ if (clients.prowlarr) {
     },
     {
       name: "prowlarr_search",
+      annotations: READ_ONLY,
       description: "Search across all Prowlarr indexers",
       inputSchema: {
         type: "object" as const,
@@ -808,6 +867,7 @@ if (clients.prowlarr) {
     },
     {
       name: "prowlarr_test_indexers",
+      annotations: TRIGGERS_REFRESH,
       description: "Test all indexers and return their health status",
       inputSchema: {
         type: "object" as const,
@@ -817,6 +877,7 @@ if (clients.prowlarr) {
     },
     {
       name: "prowlarr_get_stats",
+      annotations: READ_ONLY,
       description: "Get indexer statistics (queries, grabs, failures)",
       inputSchema: {
         type: "object" as const,
@@ -830,6 +891,7 @@ if (clients.prowlarr) {
 // Cross-service search tool
 TOOLS.push({
   name: "arr_search_all",
+  annotations: READ_ONLY,
   description: "Search across all configured *arr services for any media",
   inputSchema: {
     type: "object" as const,
@@ -847,6 +909,7 @@ TOOLS.push({
 TOOLS.push(
   {
     name: "trash_list_profiles",
+    annotations: READ_ONLY,
     description: "List available TRaSH Guides quality profiles for Radarr or Sonarr. Shows recommended profiles for different use cases (1080p, 4K, Remux, etc.)",
     inputSchema: {
       type: "object" as const,
@@ -862,6 +925,7 @@ TOOLS.push(
   },
   {
     name: "trash_get_profile",
+    annotations: READ_ONLY,
     description: "Get a specific TRaSH Guides quality profile with all custom format scores, quality settings, and implementation details",
     inputSchema: {
       type: "object" as const,
@@ -881,6 +945,7 @@ TOOLS.push(
   },
   {
     name: "trash_list_custom_formats",
+    annotations: READ_ONLY,
     description: "List available TRaSH Guides custom formats. Can filter by category: hdr, audio, resolution, source, streaming, anime, unwanted, release, language",
     inputSchema: {
       type: "object" as const,
@@ -900,6 +965,7 @@ TOOLS.push(
   },
   {
     name: "trash_get_naming",
+    annotations: READ_ONLY,
     description: "Get TRaSH Guides recommended naming conventions for your media server (Plex, Emby, Jellyfin, or standard)",
     inputSchema: {
       type: "object" as const,
@@ -920,6 +986,7 @@ TOOLS.push(
   },
   {
     name: "trash_get_quality_sizes",
+    annotations: READ_ONLY,
     description: "Get TRaSH Guides recommended min/max/preferred sizes for each quality level",
     inputSchema: {
       type: "object" as const,
@@ -939,6 +1006,7 @@ TOOLS.push(
   },
   {
     name: "trash_compare_profile",
+    annotations: READ_ONLY,
     description: "Compare your quality profile against TRaSH Guides recommendations. Shows missing custom formats, scoring differences, and quality settings. Requires the corresponding *arr service to be configured.",
     inputSchema: {
       type: "object" as const,
@@ -962,6 +1030,7 @@ TOOLS.push(
   },
   {
     name: "trash_compare_naming",
+    annotations: READ_ONLY,
     description: "Compare your naming configuration against TRaSH Guides recommendations. Requires the corresponding *arr service to be configured.",
     inputSchema: {
       type: "object" as const,
