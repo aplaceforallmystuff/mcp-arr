@@ -751,24 +751,6 @@ if (clients.lidarr) {
       },
     },
     {
-      name: "lidarr_get_root_folders",
-      description: "Get available root folders for Lidarr. Use this to find valid rootFolderPath values when adding an artist.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: "lidarr_get_quality_profiles",
-      description: "Get available quality profiles for Lidarr. Use this to find valid qualityProfileId values when adding an artist.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
-        required: [],
-      },
-    },
-    {
       name: "lidarr_get_metadata_profiles",
       description: "Get available metadata profiles for Lidarr. Use this to find valid metadataProfileId values when adding an artist.",
       inputSchema: {
@@ -2111,28 +2093,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               path: added.path,
               monitored: added.monitored,
             }, null, 2),
-          }],
-        };
-      }
-
-      case "lidarr_get_root_folders": {
-        if (!clients.lidarr) throw new Error("Lidarr not configured");
-        const folders = await clients.lidarr.getRootFolders();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(folders, null, 2),
-          }],
-        };
-      }
-
-      case "lidarr_get_quality_profiles": {
-        if (!clients.lidarr) throw new Error("Lidarr not configured");
-        const profiles = await clients.lidarr.getQualityProfiles();
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(profiles.map(p => ({ id: p.id, name: p.name })), null, 2),
           }],
         };
       }
