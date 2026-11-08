@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-11-08
+
+### Security
+- Update `@modelcontextprotocol/sdk` to 1.32.2 and refresh compatible locked dependencies. The approved candidate reports zero findings with `npm audit --audit-level=high`.
+- Reject tool arguments containing more than 1008 elements before walking the input. Advertised array inputs are limited to 1000 items.
+
+### Documentation
+- Add contribution instructions and document the verified Node.js 18 HTTP 400 limitation. Use Node.js 20 or newer for HTTP mode.
+
 ### Fixed
 - Duplicate registrations for `lidarr_get_quality_profiles` and `lidarr_get_root_folders` in `tools/list`, which caused clients that require unique tool names to reject the server ([#52](https://github.com/aplaceforallmystuff/mcp-arr/issues/52)). The shared configuration tools and their existing handlers remain in place.
 

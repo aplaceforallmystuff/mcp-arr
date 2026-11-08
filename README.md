@@ -40,7 +40,7 @@ Supports both local `stdio` mode for Claude/Codex-style clients and remote HTTP 
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20+ for HTTP mode. Node.js 18 builds, but valid HTTP requests return HTTP 400 in the verified baseline and v1.7.4 candidate. Use Node.js 20 or newer for HTTP clients.
 - At least one *arr application running with API access:
   - [Sonarr](https://sonarr.tv/) for TV series
   - [Radarr](https://radarr.video/) for movies
@@ -411,6 +411,10 @@ You tried to use a tool for a service that isn't configured. Add the correspondi
 ## Need help building or securing MCP servers?
 
 I build and maintain MCP servers like this one, and I review AI and agent setups for security. If your team needs a custom server, an integration, or a security review of one you already run, see [jimchristian.net/work](https://jimchristian.net/work/) or book a [discovery session](https://jimchristian.net/discovery/).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and tool changes.
 
 ## License
 
