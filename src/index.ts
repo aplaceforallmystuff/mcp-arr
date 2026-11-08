@@ -17,7 +17,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
+  ErrorCode,
   ListToolsRequestSchema,
+  McpError,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "node:http";
@@ -50,6 +52,37 @@ function readServerVersion(): string {
   }
   return "0.0.0-unknown";
 }
+
+// Copied verbatim from @modelcontextprotocol/sdk@1.32.2
+// dist/esm/server/mcp.js, where it is module-private and unexported. The
+// tool-call handlers below walk the arguments array themselves, so the same
+// bound is applied here before that walk. The early exit is part of the copy.
+function toolInputElementCount(value: unknown, max: number): number {
+  let count = 0;
+  const stack: unknown[] = [value];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (node === null || typeof node !== "object") continue;
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        if (++count > max) return count;
+        if (child !== null && typeof child === "object") stack.push(child);
+      }
+    } else {
+      for (const key in node) {
+        if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+        if (++count > max) return count;
+        const child = (node as Record<string, unknown>)[key];
+        if (child !== null && typeof child === "object") stack.push(child);
+      }
+    }
+  }
+  return count;
+}
+
+// Largest schema-bounded array (1000) + widest tool envelope (7 keys) + 1,
+// so every call the schemas advertise is accepted by this bound.
+const MAX_TOOL_INPUT_ELEMENTS = 1008;
 
 const SERVER_VERSION = readServerVersion();
 const TRANSPORT_MODE = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
@@ -333,6 +366,7 @@ if (clients.sonarr) {
         properties: {
           episodeIds: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Episode ID(s) to search for",
           },
@@ -386,6 +420,7 @@ if (clients.sonarr) {
           },
           tags: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Array of tag IDs from sonarr_get_tags (optional)",
           },
@@ -528,6 +563,7 @@ if (clients.radarr) {
           },
           tags: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Array of tag IDs from radarr_get_tags (optional)",
           },
@@ -560,6 +596,7 @@ if (clients.radarr) {
           },
           tags: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Replace all tags with this list of tag IDs",
           },
@@ -601,6 +638,7 @@ if (clients.radarr) {
         properties: {
           movieIds: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Array of movie IDs to search for",
           },
@@ -743,6 +781,7 @@ if (clients.lidarr) {
           },
           tags: {
             type: "array",
+            maxItems: 1000,
             items: { type: "number" },
             description: "Array of tag IDs from lidarr_get_tags (optional)",
           },
@@ -1228,6 +1267,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+
+  if (
+    toolInputElementCount(args, MAX_TOOL_INPUT_ELEMENTS) > MAX_TOOL_INPUT_ELEMENTS
+  ) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Invalid arguments for tool ${name}: arguments contain more than the maximum of ${MAX_TOOL_INPUT_ELEMENTS} elements`,
+    );
+  }
 
   try {
     switch (name) {
