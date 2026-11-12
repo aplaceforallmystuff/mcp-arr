@@ -391,6 +391,60 @@ if (clients.radarr) {
   });
 }
 
+if (clients.radarr) {
+  TOOLS.push(
+    {
+      name: "radarr_get_manual_import_candidates",
+      annotations: READ_ONLY,
+      description: "Inspect a completed download folder or downloadId for manual import. Returns exact paths, sizes, parsed movie/quality/languages and rejection reasons. Does not import. Review edition and media quality separately.",
+      inputSchema: {
+        type: "object",
+        properties: { folder: { type: "string" }, downloadId: { type: "string" } },
+        anyOf: [{ required: ["folder"] }, { required: ["downloadId"] }],
+      },
+    },
+    {
+      name: "radarr_manual_import",
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+      description: "Submit selected inspected files to Radarr ManualImport. May replace existing library files. Requires confirmed=true, exact paths/movie IDs/sizes, and exact acknowledged preference rejection reasons. Re-scans before submission. Substantive quality/language/edition problems are refused. Returns a command, not proof of import; check command and movie files before retrying. Copy preserves the source; move can remove it; auto follows Radarr download-client rules.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          folder: { type: "string" },
+          downloadId: { type: "string" },
+          confirmed: { type: "boolean" },
+          importMode: { type: "string", enum: ["auto", "copy", "move"] },
+          files: {
+            type: "array", minItems: 1, maxItems: 25,
+            items: {
+              type: "object",
+              properties: {
+                path: { type: "string" },
+                movieId: { type: "integer", minimum: 1 },
+                expectedSizeBytes: { type: "integer", minimum: 1 },
+                acknowledgedRejections: { type: "array", items: { type: "string" } },
+              },
+              required: ["path", "movieId", "expectedSizeBytes"],
+            },
+          },
+        },
+        required: ["files", "importMode", "confirmed"],
+        anyOf: [{ required: ["folder"] }, { required: ["downloadId"] }],
+      },
+    },
+    {
+      name: "radarr_get_command",
+      annotations: READ_ONLY,
+      description: "Read Radarr command status by ID, including manual-import completion or failure. Verify actual movie files after completion.",
+      inputSchema: {
+        type: "object",
+        properties: { commandId: { type: "integer", minimum: 1 } },
+        required: ["commandId"],
+      },
+    },
+  );
+}
+
 // Sonarr tools
 if (clients.sonarr) {
   TOOLS.push(
@@ -1758,6 +1812,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+      case 'radarr_get_manual_import_candidates': {
+        if (!clients.radarr) throw new Error('Radarr not configured');
+        return jsonText(await clients.radarr.getManualImportCandidates((args ?? {}) as Parameters<typeof clients.radarr.getManualImportCandidates>[0]));
+      }
+      case 'radarr_manual_import': {
+        if (!clients.radarr) throw new Error('Radarr not configured');
+        const v = (args ?? {}) as { folder?: string; downloadId?: string; files: Parameters<typeof clients.radarr.manualImport>[1]; importMode: string; confirmed: boolean };
+        const command = await clients.radarr.manualImport(v, v.files, v.importMode, v.confirmed);
+        return jsonText({ submitted: true, imported: false, command, nextStep: 'Check radarr_get_command, queue and movie files before considering the import complete or retrying.' });
+      }
+      case 'radarr_get_command': {
+        if (!clients.radarr) throw new Error('Radarr not configured');
+        return jsonText(await clients.radarr.getCommand((args as { commandId: number })?.commandId));
+      }
       case "sonarr_grab_release": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const input = args as { episodeId: number; indexerId: number; guid: string; confirmed: boolean; acknowledgedRejections?: string[] };
@@ -3010,7 +3078,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : String(error);
-    const newTools = ["sonarr_grab_release", "radarr_grab_release", "sonarr_get_episode_files", "radarr_get_movie_files", "sonarr_get_episode_releases", "radarr_get_movie_releases"];
+    const newTools = ["radarr_get_manual_import_candidates", "radarr_manual_import", "radarr_get_command", "sonarr_grab_release", "radarr_grab_release", "sonarr_get_episode_files", "radarr_get_movie_files", "sonarr_get_episode_releases", "radarr_get_movie_releases"];
     const errorMessage = newTools.includes(name) && !(error instanceof ArrValidationError)
       ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
