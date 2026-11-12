@@ -6,12 +6,12 @@
     "url": "https://github.com/aplaceforallmystuff/mcp-arr",
     "source": "github"
   },
-  "version": "1.7.4",
+  "version": "1.8.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-arr-server",
-      "version": "1.7.4",
+      "version": "1.8.0",
       "transport": {
         "type": "stdio"
       },

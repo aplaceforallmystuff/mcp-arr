@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-12
+
 ### Added
+- Explicit read-only, destructive, idempotent and open-world annotations for all tools. Annotations describe behavior; guarded writes still require confirmation.
 - Guarded Radarr manual import with fresh exact file selection, explicit confirmation/mode, narrow acknowledged preference overrides, and separate command status inspection.
 - Confirmed exact Sonarr/Radarr release grabs with a fresh unique candidate, explicit download eligibility and narrow rejection overrides.
 - Sonarr and Radarr interactive release inspection with exact identifiers, language/quality metadata, and rejection reasons.
 - Queue responses include warning messages, download IDs, server output paths, and byte counts.
 - Sonarr and Radarr file metadata tools with paginated summary or full MediaInfo responses.
+
+### Documentation
+- Synchronize both registry tool catalogues with the 73 tools advertised by the server.
 
 ## [1.7.4] - 2026-11-08
 

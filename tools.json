@@ -1,16 +1,20 @@
 [
   {
     "name": "arr_status",
-    "description": "Get status of all configured *arr services (Sonarr, Radarr, Lidarr, Prowlarr)",
+    "description": "Get status of all configured *arr services. Currently configured: Sonarr (TV), Radarr (Movies), Lidarr (Music), Prowlarr (Indexers)",
     "inputSchema": {
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "search",
-    "description": "Search across configured *arr libraries plus TRaSH Guides reference profiles",
+    "description": "Search across configured *arr libraries plus TRaSH Guides reference profiles. This is the primary discovery tool for remote MCP clients such as ChatGPT.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -19,12 +23,18 @@
           "description": "Natural-language search query"
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "fetch",
-    "description": "Fetch a specific item returned by search",
+    "description": "Fetch a specific item returned by search. Accepts an opaque item id from the search tool.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -33,35 +43,664 @@
           "description": "Opaque result id returned by search"
         }
       },
-      "required": ["id"]
+      "required": [
+        "id"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
-    "name": "arr_search_all",
-    "description": "Search across all configured *arr services for any media",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "term": {
-          "type": "string",
-          "description": "Search term"
-        }
-      },
-      "required": ["term"]
-    }
-  },
-  {
-    "name": "sonarr_get_series",
-    "description": "Get all TV series in Sonarr library",
+    "name": "sonarr_get_quality_profiles",
+    "description": "Get detailed quality profiles from Sonarr (TV). Shows allowed qualities, upgrade settings, and custom format scores.",
     "inputSchema": {
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_health",
+    "description": "Get health check warnings and issues from Sonarr (TV). Shows any problems detected by the application.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_root_folders",
+    "description": "Get root folders and storage info from Sonarr (TV). Shows paths, free space, and unmapped folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_download_clients",
+    "description": "Get download client configurations from Sonarr (TV). Shows configured clients and their settings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_naming",
+    "description": "Get file naming configuration from Sonarr (TV). Shows naming patterns for files and folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_tags",
+    "description": "Get all tags defined in Sonarr (TV). Tags can be used to organize and filter content.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_review_setup",
+    "description": "Get comprehensive configuration review for Sonarr (TV). Returns all settings for analysis: quality profiles, download clients, naming, storage, indexers, health warnings, and more. Use this to analyze the setup and suggest improvements.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_quality_profiles",
+    "description": "Get detailed quality profiles from Radarr (Movies). Shows allowed qualities, upgrade settings, and custom format scores.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_health",
+    "description": "Get health check warnings and issues from Radarr (Movies). Shows any problems detected by the application.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_root_folders",
+    "description": "Get root folders and storage info from Radarr (Movies). Shows paths, free space, and unmapped folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_download_clients",
+    "description": "Get download client configurations from Radarr (Movies). Shows configured clients and their settings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_naming",
+    "description": "Get file naming configuration from Radarr (Movies). Shows naming patterns for files and folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_tags",
+    "description": "Get all tags defined in Radarr (Movies). Tags can be used to organize and filter content.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_review_setup",
+    "description": "Get comprehensive configuration review for Radarr (Movies). Returns all settings for analysis: quality profiles, download clients, naming, storage, indexers, health warnings, and more. Use this to analyze the setup and suggest improvements.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_quality_profiles",
+    "description": "Get detailed quality profiles from Lidarr (Music). Shows allowed qualities, upgrade settings, and custom format scores.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_health",
+    "description": "Get health check warnings and issues from Lidarr (Music). Shows any problems detected by the application.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_root_folders",
+    "description": "Get root folders and storage info from Lidarr (Music). Shows paths, free space, and unmapped folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_download_clients",
+    "description": "Get download client configurations from Lidarr (Music). Shows configured clients and their settings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_naming",
+    "description": "Get file naming configuration from Lidarr (Music). Shows naming patterns for files and folders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_tags",
+    "description": "Get all tags defined in Lidarr (Music). Tags can be used to organize and filter content.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_review_setup",
+    "description": "Get comprehensive configuration review for Lidarr (Music). Returns all settings for analysis: quality profiles, download clients, naming, storage, indexers, health warnings, and more. Use this to analyze the setup and suggest improvements.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_episode_files",
+    "description": "Get paginated Sonarr episode-file metadata. fields=summary (default) gives compact codec and size data; fields=full returns all available MediaInfo. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "seriesId": {
+          "type": "number",
+          "description": "Sonarr series ID"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum records (default 25, max 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Records to skip (default 0)"
+        },
+        "fields": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "full"
+          ],
+          "description": "Response detail (default summary)"
+        }
+      },
+      "required": [
+        "seriesId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_movie_files",
+    "description": "Get paginated Radarr movie file sizes and MediaInfo. fields=summary (default) returns compact metadata; fields=full includes scene names and all available MediaInfo.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "movieId": {
+          "type": "number",
+          "description": "Radarr movie ID"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum records (default 25, max 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Records to skip (default 0)"
+        },
+        "fields": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "full"
+          ]
+        }
+      },
+      "required": [
+        "movieId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_episode_releases",
+    "description": "Read-only interactive Sonarr indexer search for alternative releases of an episode; does not grab or download. Returns compact release details and rejection reasons.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "episodeId": {
+          "type": "number",
+          "description": "Sonarr episode ID (not episode-file ID)"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum results (default 25, max 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Results to skip (default 0)"
+        }
+      },
+      "required": [
+        "episodeId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_movie_releases",
+    "description": "Read-only interactive Radarr indexer search for movie releases; does not grab or download. Returns release details and rejection reasons.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "movieId": {
+          "type": "number",
+          "description": "Radarr movie ID"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum results (default 25, max 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Results to skip (default 0)"
+        }
+      },
+      "required": [
+        "movieId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_grab_release",
+    "description": "Manually grab one specifically approved Sonarr release, with exact acknowledgement required to override cutoff/not-an-upgrade rejections. Causes a download; call only after user explicitly approves the exact release. Revalidates release against current interactive search.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "episodeId": {
+          "type": "number",
+          "description": "Sonarr episode ID"
+        },
+        "indexerId": {
+          "type": "number",
+          "description": "Indexer ID returned by sonarr_get_episode_releases"
+        },
+        "guid": {
+          "type": "string",
+          "description": "Exact release GUID returned by sonarr_get_episode_releases"
+        },
+        "acknowledgedRejections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exact current cutoff/not-an-upgrade reasons explicitly approved for override"
+        },
+        "confirmed": {
+          "type": "boolean",
+          "description": "True only after the user approves grabbing this exact release"
+        }
+      },
+      "required": [
+        "episodeId",
+        "indexerId",
+        "guid",
+        "confirmed"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_grab_release",
+    "description": "Manually grab one specifically approved Radarr release, with exact acknowledgement required to override cutoff/not-an-upgrade rejections. Causes a download; call only after user explicitly approves the exact release. Revalidates release against current interactive search.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "movieId": {
+          "type": "number",
+          "description": "Radarr movie ID"
+        },
+        "indexerId": {
+          "type": "number",
+          "description": "Indexer ID returned by radarr_get_movie_releases"
+        },
+        "guid": {
+          "type": "string",
+          "description": "Exact release GUID returned by radarr_get_movie_releases"
+        },
+        "acknowledgedRejections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exact current cutoff/not-an-upgrade reasons explicitly approved for override"
+        },
+        "confirmed": {
+          "type": "boolean",
+          "description": "True only after the user approves grabbing this exact release"
+        }
+      },
+      "required": [
+        "movieId",
+        "indexerId",
+        "guid",
+        "confirmed"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_manual_import_candidates",
+    "description": "Inspect a completed download folder or downloadId for manual import. Returns exact paths, sizes, parsed movie/quality/languages and rejection reasons. Does not import. Review edition and media quality separately.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "downloadId": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "folder"
+          ]
+        },
+        {
+          "required": [
+            "downloadId"
+          ]
+        }
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_manual_import",
+    "description": "Submit selected inspected files to Radarr ManualImport. May replace existing library files. Requires confirmed=true, exact paths/movie IDs/sizes, and exact acknowledged preference rejection reasons. Re-scans before submission. Substantive quality/language/edition problems are refused. Returns a command, not proof of import; check command and movie files before retrying. Copy preserves the source; move can remove it; auto follows Radarr download-client rules.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "downloadId": {
+          "type": "string"
+        },
+        "confirmed": {
+          "type": "boolean"
+        },
+        "importMode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "copy",
+            "move"
+          ]
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 25,
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "movieId": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "expectedSizeBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "acknowledgedRejections": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "path",
+              "movieId",
+              "expectedSizeBytes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "files",
+        "importMode",
+        "confirmed"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "folder"
+          ]
+        },
+        {
+          "required": [
+            "downloadId"
+          ]
+        }
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "radarr_get_command",
+    "description": "Read Radarr command status by ID, including manual-import completion or failure. Verify actual movie files after completion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandId": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "commandId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "sonarr_get_series",
+    "description": "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of series to return (default: 25, max: 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Number of series to skip before returning results (default: 0)"
+        },
+        "search": {
+          "type": "string",
+          "description": "Optional case-insensitive title filter"
+        }
+      },
+      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "sonarr_search",
-    "description": "Search for TV series to add to Sonarr",
+    "description": "Search for TV series by name. Returns results with tvdbId needed for sonarr_add_series.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -70,7 +709,13 @@
           "description": "Search term (show name)"
         }
       },
-      "required": ["term"]
+      "required": [
+        "term"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -89,6 +734,10 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -103,6 +752,10 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -120,7 +773,13 @@
           "description": "Optional: filter to a specific season"
         }
       },
-      "required": ["seriesId"]
+      "required": [
+        "seriesId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -134,7 +793,15 @@
           "description": "Series ID to search for missing episodes"
         }
       },
-      "required": ["seriesId"]
+      "required": [
+        "seriesId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
@@ -145,88 +812,128 @@
       "properties": {
         "episodeIds": {
           "type": "array",
-          "items": { "type": "number" },
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
           "description": "Episode ID(s) to search for"
         }
       },
-      "required": ["episodeIds"]
+      "required": [
+        "episodeIds"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
-    "name": "sonarr_get_quality_profiles",
-    "description": "Get detailed quality profiles from Sonarr. Shows allowed qualities, upgrade settings, and custom format scores.",
+    "name": "sonarr_refresh_series",
+    "description": "Trigger a metadata refresh for a specific series in Sonarr",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "seriesId": {
+          "type": "number",
+          "description": "Series ID to refresh"
+        }
+      },
+      "required": [
+        "seriesId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
-    "name": "sonarr_get_health",
-    "description": "Get health check warnings and issues from Sonarr",
+    "name": "sonarr_add_series",
+    "description": "Add a TV series to Sonarr. Use sonarr_search first to find the tvdbId, and sonarr_get_root_folders / sonarr_get_quality_profiles to get valid values for rootFolderPath and qualityProfileId. Use sonarr_get_tags to get valid tag IDs.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "sonarr_get_root_folders",
-    "description": "Get root folders and storage info from Sonarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "sonarr_get_download_clients",
-    "description": "Get download client configurations from Sonarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "sonarr_get_naming",
-    "description": "Get file naming configuration from Sonarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "sonarr_get_tags",
-    "description": "Get all tags defined in Sonarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "sonarr_review_setup",
-    "description": "Get comprehensive configuration review for Sonarr. Returns all settings for AI-assisted analysis.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "tvdbId": {
+          "type": "number",
+          "description": "TVDB ID from sonarr_search results"
+        },
+        "title": {
+          "type": "string",
+          "description": "Series title"
+        },
+        "qualityProfileId": {
+          "type": "number",
+          "description": "Quality profile ID from sonarr_get_quality_profiles"
+        },
+        "rootFolderPath": {
+          "type": "string",
+          "description": "Root folder path from sonarr_get_root_folders"
+        },
+        "monitored": {
+          "type": "boolean",
+          "description": "Whether to monitor the series (default: true)"
+        },
+        "seasonFolder": {
+          "type": "boolean",
+          "description": "Whether to use season folders (default: true)"
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
+          "description": "Array of tag IDs from sonarr_get_tags (optional)"
+        }
+      },
+      "required": [
+        "tvdbId",
+        "title",
+        "qualityProfileId",
+        "rootFolderPath"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
     "name": "radarr_get_movies",
-    "description": "Get all movies in Radarr library",
+    "description": "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of movies to return (default: 25, max: 100)"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Number of movies to skip before returning results (default: 0)"
+        },
+        "search": {
+          "type": "string",
+          "description": "Optional case-insensitive title filter"
+        }
+      },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "radarr_search",
-    "description": "Search for movies to add to Radarr",
+    "description": "Search for movies by name. Returns results with tmdbId needed for radarr_add_movie.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -235,7 +942,13 @@
           "description": "Search term (movie name)"
         }
       },
-      "required": ["term"]
+      "required": [
+        "term"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -254,6 +967,10 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -268,6 +985,10 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -281,70 +1002,204 @@
           "description": "Movie ID to search for"
         }
       },
-      "required": ["movieId"]
+      "required": [
+        "movieId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
-    "name": "radarr_get_quality_profiles",
-    "description": "Get detailed quality profiles from Radarr",
+    "name": "radarr_refresh_movie",
+    "description": "Trigger a metadata refresh for a specific movie in Radarr",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "movieId": {
+          "type": "number",
+          "description": "Movie ID to refresh"
+        }
+      },
+      "required": [
+        "movieId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
-    "name": "radarr_get_health",
-    "description": "Get health check warnings and issues from Radarr",
+    "name": "radarr_add_movie",
+    "description": "Add a movie to Radarr. Use radarr_search first to find the tmdbId, and radarr_get_root_folders / radarr_get_quality_profiles to get valid values. Use radarr_get_tags to get valid tag IDs.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "tmdbId": {
+          "type": "number",
+          "description": "TMDB ID from radarr_search results"
+        },
+        "title": {
+          "type": "string",
+          "description": "Movie title"
+        },
+        "qualityProfileId": {
+          "type": "number",
+          "description": "Quality profile ID from radarr_get_quality_profiles"
+        },
+        "rootFolderPath": {
+          "type": "string",
+          "description": "Root folder path from radarr_get_root_folders"
+        },
+        "monitored": {
+          "type": "boolean",
+          "description": "Whether to monitor the movie (default: true)"
+        },
+        "minimumAvailability": {
+          "type": "string",
+          "enum": [
+            "announced",
+            "inCinemas",
+            "released",
+            "tba"
+          ],
+          "description": "When to consider the movie available (default: announced)"
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
+          "description": "Array of tag IDs from radarr_get_tags (optional)"
+        }
+      },
+      "required": [
+        "tmdbId",
+        "title",
+        "qualityProfileId",
+        "rootFolderPath"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
-    "name": "radarr_get_root_folders",
-    "description": "Get root folders and storage info from Radarr",
+    "name": "radarr_update_movie",
+    "description": "Update a movie in Radarr. Can change qualityProfileId, monitored status, minimumAvailability, tags, and path. Fetches the full movie object, applies your changes, and PUTs it back.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "movieId": {
+          "type": "number",
+          "description": "Movie ID to update"
+        },
+        "qualityProfileId": {
+          "type": "number",
+          "description": "New quality profile ID (from radarr_get_quality_profiles)"
+        },
+        "monitored": {
+          "type": "boolean",
+          "description": "Whether to monitor the movie"
+        },
+        "minimumAvailability": {
+          "type": "string",
+          "enum": [
+            "announced",
+            "inCinemas",
+            "released",
+            "tba"
+          ],
+          "description": "When to consider the movie available"
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
+          "description": "Replace all tags with this list of tag IDs"
+        },
+        "path": {
+          "type": "string",
+          "description": "New file path for the movie"
+        }
+      },
+      "required": [
+        "movieId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true
     }
   },
   {
-    "name": "radarr_get_download_clients",
-    "description": "Get download client configurations from Radarr",
+    "name": "radarr_delete_queue_item",
+    "description": "Remove an item from the Radarr download queue. Use radarr_get_queue to find queue item IDs. Can optionally blocklist the release to prevent re-grabbing.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "queueId": {
+          "type": "number",
+          "description": "Queue item ID (from radarr_get_queue)"
+        },
+        "removeFromClient": {
+          "type": "boolean",
+          "description": "Also remove from download client (default: true)"
+        },
+        "blocklist": {
+          "type": "boolean",
+          "description": "Add release to blocklist to prevent re-grabbing (default: false)"
+        }
+      },
+      "required": [
+        "queueId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true
     }
   },
   {
-    "name": "radarr_get_naming",
-    "description": "Get file naming configuration from Radarr",
+    "name": "radarr_search_movies",
+    "description": "Trigger a search for multiple movies at once. Accepts an array of movie IDs. Use this for bulk upgrade requests instead of calling radarr_search_movie one at a time.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "radarr_get_tags",
-    "description": "Get all tags defined in Radarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "radarr_review_setup",
-    "description": "Get comprehensive configuration review for Radarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
+      "properties": {
+        "movieIds": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
+          "description": "Array of movie IDs to search for"
+        }
+      },
+      "required": [
+        "movieIds"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
@@ -354,11 +1209,15 @@
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "lidarr_search",
-    "description": "Search for artists to add to Lidarr",
+    "description": "Search for artists by name. Returns results with foreignArtistId needed for lidarr_add_artist.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -367,7 +1226,13 @@
           "description": "Search term (artist name)"
         }
       },
-      "required": ["term"]
+      "required": [
+        "term"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -386,6 +1251,10 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -399,7 +1268,13 @@
           "description": "Artist ID to get albums for"
         }
       },
-      "required": ["artistId"]
+      "required": [
+        "artistId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -413,7 +1288,15 @@
           "description": "Album ID to search for"
         }
       },
-      "required": ["albumId"]
+      "required": [
+        "albumId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
@@ -427,7 +1310,15 @@
           "description": "Artist ID to search missing albums for"
         }
       },
-      "required": ["artistId"]
+      "required": [
+        "artistId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
@@ -442,69 +1333,77 @@
         }
       },
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
-    "name": "lidarr_get_quality_profiles",
-    "description": "Get detailed quality profiles from Lidarr",
+    "name": "lidarr_add_artist",
+    "description": "Add an artist to Lidarr. Use lidarr_search first to find the foreignArtistId, and lidarr_get_root_folders / lidarr_get_quality_profiles / lidarr_get_metadata_profiles to get valid values. Use lidarr_get_tags to get valid tag IDs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "foreignArtistId": {
+          "type": "string",
+          "description": "Foreign artist ID (MusicBrainz ID) from lidarr_search results"
+        },
+        "artistName": {
+          "type": "string",
+          "description": "Artist name"
+        },
+        "qualityProfileId": {
+          "type": "number",
+          "description": "Quality profile ID from lidarr_get_quality_profiles"
+        },
+        "metadataProfileId": {
+          "type": "number",
+          "description": "Metadata profile ID from lidarr_get_metadata_profiles"
+        },
+        "rootFolderPath": {
+          "type": "string",
+          "description": "Root folder path from lidarr_get_root_folders"
+        },
+        "monitored": {
+          "type": "boolean",
+          "description": "Whether to monitor the artist (default: true)"
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "number"
+          },
+          "description": "Array of tag IDs from lidarr_get_tags (optional)"
+        }
+      },
+      "required": [
+        "foreignArtistId",
+        "artistName",
+        "qualityProfileId",
+        "metadataProfileId",
+        "rootFolderPath"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "lidarr_get_metadata_profiles",
+    "description": "Get available metadata profiles for Lidarr. Use this to find valid metadataProfileId values when adding an artist.",
     "inputSchema": {
       "type": "object",
       "properties": {},
       "required": []
-    }
-  },
-  {
-    "name": "lidarr_get_health",
-    "description": "Get health check warnings and issues from Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "lidarr_get_root_folders",
-    "description": "Get root folders and storage info from Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "lidarr_get_download_clients",
-    "description": "Get download client configurations from Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "lidarr_get_naming",
-    "description": "Get file naming configuration from Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "lidarr_get_tags",
-    "description": "Get all tags defined in Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "lidarr_review_setup",
-    "description": "Get comprehensive configuration review for Lidarr",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -514,6 +1413,10 @@
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -527,7 +1430,13 @@
           "description": "Search query"
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -537,6 +1446,12 @@
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {
@@ -546,79 +1461,146 @@
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "arr_search_all",
+    "description": "Search across all configured *arr services for any media",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "Search term"
+        }
+      },
+      "required": [
+        "term"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_list_profiles",
-    "description": "List available TRaSH Guides quality profiles for Radarr or Sonarr",
+    "description": "List available TRaSH Guides quality profiles for Radarr or Sonarr. Shows recommended profiles for different use cases (1080p, 4K, Remux, etc.)",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service to get profiles for"
         }
       },
-      "required": ["service"]
+      "required": [
+        "service"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_get_profile",
-    "description": "Get a specific TRaSH Guides quality profile with all custom format scores and settings",
+    "description": "Get a specific TRaSH Guides quality profile with all custom format scores, quality settings, and implementation details",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "profile": {
           "type": "string",
-          "description": "Profile name (e.g., 'remux-web-1080p', 'uhd-bluray-web')"
+          "description": "Profile name (e.g., 'remux-web-1080p', 'uhd-bluray-web', 'hd-bluray-web')"
         }
       },
-      "required": ["service", "profile"]
+      "required": [
+        "service",
+        "profile"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_list_custom_formats",
-    "description": "List available TRaSH Guides custom formats with optional category filter",
+    "description": "List available TRaSH Guides custom formats. Can filter by category: hdr, audio, resolution, source, streaming, anime, unwanted, release, language",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "category": {
           "type": "string",
-          "description": "Optional filter: hdr, audio, resolution, source, streaming, anime, unwanted, release, language"
+          "description": "Optional filter by category"
         }
       },
-      "required": ["service"]
+      "required": [
+        "service"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_get_naming",
-    "description": "Get TRaSH Guides recommended naming conventions for your media server",
+    "description": "Get TRaSH Guides recommended naming conventions for your media server (Plex, Emby, Jellyfin, or standard)",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "mediaServer": {
           "type": "string",
-          "enum": ["plex", "emby", "jellyfin", "standard"],
+          "enum": [
+            "plex",
+            "emby",
+            "jellyfin",
+            "standard"
+          ],
           "description": "Which media server you use"
         }
       },
-      "required": ["service", "mediaServer"]
+      "required": [
+        "service",
+        "mediaServer"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
@@ -629,7 +1611,10 @@
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "type": {
@@ -637,18 +1622,27 @@
           "description": "Content type: 'movie', 'anime' for Radarr; 'series', 'anime' for Sonarr"
         }
       },
-      "required": ["service"]
+      "required": [
+        "service"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_compare_profile",
-    "description": "Compare your quality profile against TRaSH Guides recommendations",
+    "description": "Compare your quality profile against TRaSH Guides recommendations. Shows missing custom formats, scoring differences, and quality settings. Requires the corresponding *arr service to be configured.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "profileId": {
@@ -660,27 +1654,50 @@
           "description": "TRaSH profile name to compare against"
         }
       },
-      "required": ["service", "profileId", "trashProfile"]
+      "required": [
+        "service",
+        "profileId",
+        "trashProfile"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   },
   {
     "name": "trash_compare_naming",
-    "description": "Compare your naming configuration against TRaSH Guides recommendations",
+    "description": "Compare your naming configuration against TRaSH Guides recommendations. Requires the corresponding *arr service to be configured.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "service": {
           "type": "string",
-          "enum": ["radarr", "sonarr"],
+          "enum": [
+            "radarr",
+            "sonarr"
+          ],
           "description": "Which service"
         },
         "mediaServer": {
           "type": "string",
-          "enum": ["plex", "emby", "jellyfin", "standard"],
+          "enum": [
+            "plex",
+            "emby",
+            "jellyfin",
+            "standard"
+          ],
           "description": "Which media server you use"
         }
       },
-      "required": ["service", "mediaServer"]
+      "required": [
+        "service",
+        "mediaServer"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
     }
   }
 ]
