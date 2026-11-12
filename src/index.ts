@@ -282,6 +282,42 @@ if (clients.sonarr) addConfigTools('sonarr', 'Sonarr (TV)');
 if (clients.radarr) addConfigTools('radarr', 'Radarr (Movies)');
 if (clients.lidarr) addConfigTools('lidarr', 'Lidarr (Music)');
 
+if (clients.sonarr) {
+  TOOLS.push({
+    name: "sonarr_get_episode_files",
+    annotations: READ_ONLY,
+    description: "Get paginated Sonarr episode-file metadata. fields=summary (default) gives compact codec and size data; fields=full returns all available MediaInfo. Read-only.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        seriesId: { type: "number", description: "Sonarr series ID" },
+        limit: { type: "number", description: "Maximum records (default 25, max 100)" },
+        offset: { type: "number", description: "Records to skip (default 0)" },
+        fields: { type: "string", enum: ["summary", "full"], description: "Response detail (default summary)" },
+      },
+      required: ["seriesId"],
+    },
+  });
+}
+
+if (clients.radarr) {
+  TOOLS.push({
+    name: "radarr_get_movie_files",
+    annotations: READ_ONLY,
+    description: "Get paginated Radarr movie file sizes and MediaInfo. fields=summary (default) returns compact metadata; fields=full includes scene names and all available MediaInfo.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        movieId: { type: "number", description: "Radarr movie ID" },
+        limit: { type: "number", description: "Maximum records (default 25, max 100)" },
+        offset: { type: "number", description: "Records to skip (default 0)" },
+        fields: { type: "string", enum: ["summary", "full"] },
+      },
+      required: ["movieId"],
+    },
+  });
+}
+
 // Sonarr tools
 if (clients.sonarr) {
   TOOLS.push(
@@ -1644,6 +1680,102 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // Sonarr handlers
+      case "sonarr_get_episode_files": {
+        if (!clients.sonarr) throw new Error("Sonarr not configured");
+        const input = args as { seriesId: number; limit?: number; offset?: number; fields?: "summary" | "full" };
+        if (!Number.isSafeInteger(input?.seriesId) || input.seriesId <= 0) {
+          return textError("seriesId must be a positive integer");
+        }
+        const limit = input.limit === undefined ? 25 : input.limit;
+        const offset = input.offset === undefined ? 0 : input.offset;
+        const fields = input.fields ?? "summary";
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isSafeInteger(offset) || offset < 0) {
+          return textError("limit must be 1-100 and offset must be a non-negative integer");
+        }
+        if (fields !== "summary" && fields !== "full") {
+          return textError("fields must be summary or full");
+        }
+        const files = await clients.sonarr.getEpisodeFiles(input.seriesId);
+        const page = files.slice(offset, offset + limit);
+        return jsonText({
+          seriesId: input.seriesId,
+          fields,
+          total: files.length,
+          returned: page.length,
+          offset,
+          limit,
+          hasMore: offset + page.length < files.length,
+          nextOffset: offset + page.length < files.length ? offset + page.length : null,
+          files: page.map(f => fields === "summary" ? ({
+            id: f.id,
+            sizeBytes: f.size,
+            videoCodec: f.mediaInfo?.videoCodec ?? null,
+            videoBitrate: f.mediaInfo?.videoBitrate ?? null,
+            audioCodec: f.mediaInfo?.audioCodec ?? null,
+            resolution: f.mediaInfo?.resolution ?? null,
+            quality: f.quality?.quality?.name ?? null,
+            mediaInfoAvailable: f.mediaInfo != null,
+          }) : ({
+            id: f.id,
+            seasonNumber: f.seasonNumber,
+            relativePath: f.relativePath,
+            sizeBytes: f.size,
+            sceneName: f.sceneName,
+            releaseGroup: f.releaseGroup,
+            quality: f.quality?.quality?.name,
+            resolution: f.quality?.quality?.resolution,
+            mediaInfo: f.mediaInfo ?? null,
+          })),
+        });
+      }
+      case "radarr_get_movie_files": {
+        if (!clients.radarr) throw new Error("Radarr not configured");
+        const input = args as { movieId: number; limit?: number; offset?: number; fields?: "summary" | "full" };
+        if (!Number.isSafeInteger(input?.movieId) || input.movieId <= 0) {
+          return textError("movieId must be a positive integer");
+        }
+        const limit = input.limit === undefined ? 25 : input.limit;
+        const offset = input.offset === undefined ? 0 : input.offset;
+        const fields = input.fields ?? "summary";
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isSafeInteger(offset) || offset < 0) {
+          return textError("limit must be 1-100 and offset must be a non-negative integer");
+        }
+        if (fields !== "summary" && fields !== "full") {
+          return textError("fields must be summary or full");
+        }
+        const files = await clients.radarr.getMovieFiles(input.movieId);
+        const page = files.slice(offset, offset + limit);
+        return jsonText({
+          movieId: input.movieId,
+          fields,
+          total: files.length,
+          returned: page.length,
+          offset,
+          limit,
+          hasMore: offset + page.length < files.length,
+          nextOffset: offset + page.length < files.length ? offset + page.length : null,
+          files: page.map(f => fields === "full" ? ({
+            id: f.id,
+            movieId: f.movieId,
+            relativePath: f.relativePath,
+            sizeBytes: f.size,
+            sceneName: f.sceneName,
+            releaseGroup: f.releaseGroup,
+            quality: f.quality?.quality?.name,
+            mediaInfo: f.mediaInfo ?? null,
+          }) : ({
+            id: f.id,
+            sizeBytes: f.size,
+            quality: f.quality?.quality?.name,
+            videoCodec: f.mediaInfo?.videoCodec ?? null,
+            audioCodec: f.mediaInfo?.audioCodec ?? null,
+            audioChannels: f.mediaInfo?.audioChannels ?? null,
+            resolution: f.mediaInfo?.resolution ?? null,
+          })),
+        });
+      }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
         const { limit = 25, offset = 0, search } = args as {
@@ -2687,7 +2819,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const newTools = ["sonarr_get_episode_files", "radarr_get_movie_files"];
+    const errorMessage = newTools.includes(name)
+      ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
       content: [{ type: "text", text: `Error: ${errorMessage}` }],
       isError: true,
