@@ -1,15 +1,17 @@
 name: Release
 
-# Builds the Docker image (-> GHCR) and the GitHub Release on every version tag.
+# Builds the Docker image (-> GHCR), publishes to npm and creates the GitHub
+# Release on every version tag.
 #
-# npm publishing is intentionally NOT automated here. It is done manually so the
-# project holds no long-lived npm token. Everything in this workflow uses the
-# per-run, auto-expiring GITHUB_TOKEN only — there is nothing to store or rotate.
+# npm publishing uses npm trusted publishing (OIDC), so the project still holds
+# no long-lived npm token. The npm package settings must list this repository and
+# this workflow file (release.yml) as a trusted publisher. Everything else uses
+# the per-run, auto-expiring GITHUB_TOKEN — there is nothing to store or rotate.
 #
 # Release flow:
 #   1. bump package.json + CHANGELOG, commit
-#   2. git tag vX.Y.Z && git push --tags   (this workflow builds image + release)
-#   3. npm publish                          (manual, passkey-gated)
+#   2. git tag vX.Y.Z && git push --tags, or run this workflow with the version
+#      (this workflow builds the image, publishes to npm and creates the release)
 
 on:
   push:
@@ -169,7 +171,39 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 4. GitHub Release ───────────────────────────────────────────────────────
+  # ── 4. npm (trusted publishing) ─────────────────────────────────────────────
+  npm-publish:
+    needs: [prepare, build-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # OIDC for npm trusted publishing and provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.x
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      # Skip quietly if this version is already on npm (e.g. a re-run).
+      - name: Publish
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          NAME="$(node -p "require('./package.json').name")"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "${NAME}@${VERSION} is already on npm; nothing to publish."
+            exit 0
+          fi
+          npm publish
+
+  # ── 5. GitHub Release ───────────────────────────────────────────────────────
   github-release:
     needs: [prepare, build-test]
     runs-on: ubuntu-latest
