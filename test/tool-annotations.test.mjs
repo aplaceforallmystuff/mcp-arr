@@ -7,6 +7,7 @@ import test from "node:test";
 // apart from tools that change state. All four services are configured (with
 // unreachable URLs; listing tools makes no API calls) so every tool is listed.
 const WRITE_TOOLS = [
+  "radarr_manual_import",
   "sonarr_grab_release",
   "radarr_grab_release",
   "sonarr_search_missing",
@@ -50,6 +51,14 @@ test("every tool declares an explicit readOnlyHint", async () => {
 
   for (const name of ["sonarr_refresh_series", "radarr_refresh_movie", "prowlarr_test_indexers"]) {
     assert.equal(tools.find(tool => tool.name === name).annotations.idempotentHint, false);
+  }
+
+  for (const name of ["sonarr_grab_release", "radarr_grab_release", "radarr_manual_import"]) {
+    const annotations = tools.find(tool => tool.name === name)?.annotations;
+    if (annotations) {
+      assert.equal(annotations.destructiveHint, true);
+      assert.equal(annotations.idempotentHint, false);
+    }
   }
 
   const writeTools = tools

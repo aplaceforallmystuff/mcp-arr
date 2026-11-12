@@ -266,6 +266,12 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Radarr manual import
+
+Use `radarr_get_manual_import_candidates` to inspect a completed download folder or download ID. Review exact paths, movie mappings, sizes, quality, languages and rejection reasons before calling `radarr_manual_import`. Import requires `confirmed=true`, 1–25 selected files with expected sizes, and an explicit `auto`, `copy` or `move` mode. A fresh scan must still match each selection. Duplicate paths or movie selections, unknown metadata, changed download IDs and substantive rejections are refused. Preference overrides use the same narrow recognized reasons as exact release grabs and require exact current acknowledgements.
+
+Radarr may replace existing library files. `copy` preserves the download source; `move` can remove it; `auto` follows Radarr download-client rules. A response with `submitted=true` and `imported=false` means only that Radarr accepted a command. Use `radarr_get_command` and inspect the resulting movie files and queue before treating the import as complete or retrying.
+
 ### Exact release grabs
 
 Use `sonarr_grab_release` or `radarr_grab_release` only after the user approves the exact media ID, indexer ID and GUID. Both require `confirmed=true` and re-query current releases before submitting one download. Missing, ambiguous or download-disallowed candidates are refused.
