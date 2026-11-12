@@ -435,6 +435,14 @@ export interface SonarrRelease {
 
 export interface RadarrRelease extends SonarrRelease { }
 
+export class ArrValidationError extends Error {}
+
+// Unknown rejection wording must be reviewed rather than treated as a preference.
+function isPreferenceRejection(reason: string): boolean {
+  return reason === "Not an upgrade" || reason === "Existing file meets cutoff" ||
+    /^Existing file meets cutoff: (?:Remux|Bluray|WEBDL|WEBRip|HDTV)-(?:720p|1080p|2160p)$/.test(reason);
+}
+
 export class ArrClient {
   private config: ArrConfig;
   private serviceName: ArrService;
@@ -589,6 +597,28 @@ export class ArrClient {
 // Service-specific clients
 
 export class SonarrClient extends ArrClient {
+  async grabEpisodeRelease(episodeId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?episodeId=${episodeId}`);
+    const matches = releases.filter(r => r.indexerId === indexerId && r.guid === guid);
+    if (matches.length !== 1) throw new ArrValidationError("Selected release is missing or ambiguous; inspect current results");
+    const release = matches[0];
+    if (!release) throw new ArrValidationError("Selected release is no longer available for this episode");
+    const reasons = release.rejections ?? [];
+    if (!Array.isArray(reasons) || reasons.some(reason => typeof reason !== "string")) {
+      throw new ArrValidationError("Release rejection metadata is invalid; inspect current results");
+    }
+    if ((release.rejected && reasons.length === 0) ||
+      reasons.some(reason => !isPreferenceRejection(reason) || !acknowledgedRejections.includes(reason)) ||
+      acknowledgedRejections.some(reason => !reasons.includes(reason))) {
+      throw new ArrValidationError("Release rejections are substantive, unacknowledged, or changed; inspect current results");
+    }
+    if (release.downloadAllowed !== true) throw new ArrValidationError("Sonarr reports that this release cannot be downloaded");
+    return this['request']<unknown>('/release', {
+      method: 'POST',
+      body: JSON.stringify({ guid, indexerId }),
+    });
+  }
+
   async getEpisodeReleases(episodeId: number): Promise<SonarrRelease[]> {
     return this['request']<SonarrRelease[]>(`/release?episodeId=${episodeId}`);
   }
@@ -691,6 +721,25 @@ export class SonarrClient extends ArrClient {
 }
 
 export class RadarrClient extends ArrClient {
+  async grabMovieRelease(movieId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?movieId=${movieId}`);
+    const matches = releases.filter(r => r.indexerId === indexerId && r.guid === guid);
+    if (matches.length !== 1) throw new ArrValidationError("Selected release is missing or ambiguous; inspect current results");
+    const release = matches[0];
+    if (!release) throw new ArrValidationError("Selected release is no longer available for this movie");
+    const reasons = release.rejections ?? [];
+    if (!Array.isArray(reasons) || reasons.some(reason => typeof reason !== "string")) {
+      throw new ArrValidationError("Release rejection metadata is invalid; inspect current results");
+    }
+    if ((release.rejected && reasons.length === 0) ||
+      reasons.some(reason => !isPreferenceRejection(reason) || !acknowledgedRejections.includes(reason)) ||
+      acknowledgedRejections.some(reason => !reasons.includes(reason))) {
+      throw new ArrValidationError("Release rejections are substantive, unacknowledged, or changed; inspect current results");
+    }
+    if (release.downloadAllowed !== true) throw new ArrValidationError("Radarr reports that this release cannot be downloaded");
+    return this['request']<unknown>('/release', { method: 'POST', body: JSON.stringify({ guid, indexerId }) });
+  }
+
   async getMovieReleases(movieId: number): Promise<RadarrRelease[]> {
     return this['request']<RadarrRelease[]>(`/release?movieId=${movieId}`);
   }
