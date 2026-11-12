@@ -7,6 +7,8 @@ import test from "node:test";
 // apart from tools that change state. All four services are configured (with
 // unreachable URLs; listing tools makes no API calls) so every tool is listed.
 const WRITE_TOOLS = [
+  "sonarr_grab_release",
+  "radarr_grab_release",
   "sonarr_search_missing",
   "sonarr_search_episode",
   "sonarr_refresh_series",

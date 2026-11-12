@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Confirmed exact Sonarr/Radarr release grabs with a fresh unique candidate, explicit download eligibility and narrow rejection overrides.
 - Sonarr and Radarr interactive release inspection with exact identifiers, language/quality metadata, and rejection reasons.
 - Queue responses include warning messages, download IDs, server output paths, and byte counts.
 - Sonarr and Radarr file metadata tools with paginated summary or full MediaInfo responses.

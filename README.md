@@ -266,6 +266,12 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Exact release grabs
+
+Use `sonarr_grab_release` or `radarr_grab_release` only after the user approves the exact media ID, indexer ID and GUID. Both require `confirmed=true` and re-query current releases before submitting one download. Missing, ambiguous or download-disallowed candidates are refused.
+
+Rejection overrides require exact current `acknowledgedRejections` strings. Supported preference reasons are `Not an upgrade`, `Existing file meets cutoff`, and cutoff reasons naming a Remux/Bluray/WEBDL/WEBRip/HDTV quality at 720p, 1080p or 2160p. Unknown wording and substantive rejections are refused. After an ambiguous submission, inspect the queue and library before retrying.
+
 ### Release inspection
 
 Use `sonarr_get_episode_releases` or `radarr_get_movie_releases` to inspect interactive indexer results without starting downloads. Responses include exact GUID/indexer IDs, sizes, languages, quality, availability and rejection reasons. Pagination limits the response, not the underlying indexer search.
