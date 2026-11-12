@@ -1345,6 +1345,11 @@ async function getPaginatedQueue(
     protocol: q.protocol,
     trackedDownloadStatus: q.trackedDownloadStatus,
     trackedDownloadState: q.trackedDownloadState,
+    statusMessages: q.statusMessages ?? [],
+    downloadId: q.downloadId,
+    outputPath: q.outputPath,
+    sizeBytes: q.size,
+    sizeLeftBytes: q.sizeleft,
   }));
 
   return {

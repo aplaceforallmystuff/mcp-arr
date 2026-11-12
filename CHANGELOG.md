@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Queue responses include warning messages, download IDs, server output paths, and byte counts.
 - Sonarr and Radarr file metadata tools with paginated summary or full MediaInfo responses.
 
 ## [1.7.4] - 2026-11-08
