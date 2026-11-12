@@ -415,6 +415,26 @@ export interface RadarrMovieFile {
   mediaInfo?: Record<string, unknown>;
 }
 
+export interface SonarrRelease {
+  guid?: string;
+  indexerId?: number;
+  title?: string;
+  size?: number;
+  indexer?: string;
+  protocol?: string;
+  quality?: { quality?: { name?: string; resolution?: number } };
+  languages?: Array<{ name?: string }>;
+  rejected?: boolean;
+  rejections?: string[];
+  customFormatScore?: number;
+  seeders?: number;
+  leechers?: number;
+  age?: number;
+  downloadAllowed?: boolean;
+}
+
+export interface RadarrRelease extends SonarrRelease { }
+
 export class ArrClient {
   private config: ArrConfig;
   private serviceName: ArrService;
@@ -569,6 +589,10 @@ export class ArrClient {
 // Service-specific clients
 
 export class SonarrClient extends ArrClient {
+  async getEpisodeReleases(episodeId: number): Promise<SonarrRelease[]> {
+    return this['request']<SonarrRelease[]>(`/release?episodeId=${episodeId}`);
+  }
+
   async getEpisodeFiles(seriesId: number): Promise<SonarrEpisodeFile[]> {
     return this['request']<SonarrEpisodeFile[]>(`/episodefile?seriesId=${seriesId}`);
   }
@@ -667,6 +691,10 @@ export class SonarrClient extends ArrClient {
 }
 
 export class RadarrClient extends ArrClient {
+  async getMovieReleases(movieId: number): Promise<RadarrRelease[]> {
+    return this['request']<RadarrRelease[]>(`/release?movieId=${movieId}`);
+  }
+
   async getMovieFiles(movieId: number): Promise<RadarrMovieFile[]> {
     return this['request']<RadarrMovieFile[]>(`/moviefile?movieId=${movieId}`);
   }
