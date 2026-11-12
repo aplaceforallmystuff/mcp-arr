@@ -266,6 +266,10 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Queue diagnostics
+
+Paginated queue responses include `statusMessages`, `downloadId`, `outputPath`, `sizeBytes` and `sizeLeftBytes`. These fields help distinguish failed downloads from completed downloads awaiting import. Queue absence alone does not establish success or failure. Output paths refer to the configured server filesystem.
+
 ### Add Sonarr and Radarr file metadata tools
 
 Inspect existing episode and movie files with paginated summary or full MediaInfo responses. Defaults to 25 records; limit is capped at 100. No media files are opened or changed.
