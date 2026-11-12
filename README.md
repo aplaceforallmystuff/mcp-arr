@@ -266,6 +266,10 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Release inspection
+
+Use `sonarr_get_episode_releases` or `radarr_get_movie_releases` to inspect interactive indexer results without starting downloads. Responses include exact GUID/indexer IDs, sizes, languages, quality, availability and rejection reasons. Pagination limits the response, not the underlying indexer search.
+
 ### Queue diagnostics
 
 Paginated queue responses include `statusMessages`, `downloadId`, `outputPath`, `sizeBytes` and `sizeLeftBytes`. These fields help distinguish failed downloads from completed downloads awaiting import. Queue absence alone does not establish success or failure. Output paths refer to the configured server filesystem.
