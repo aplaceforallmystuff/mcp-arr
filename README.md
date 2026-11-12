@@ -266,6 +266,13 @@ The existing service-specific tools remain available for richer local or power-u
 
 ## Available Tools
 
+### Add Sonarr and Radarr file metadata tools
+
+Inspect existing episode and movie files with paginated summary or full MediaInfo responses. Defaults to 25 records; limit is capped at 100. No media files are opened or changed.
+
+- `sonarr_get_episode_files`
+- `radarr_get_movie_files`
+
 ### General Tools
 
 | Tool | Description |
