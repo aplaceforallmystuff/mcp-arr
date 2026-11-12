@@ -60,6 +60,21 @@
     }
   },
   {
+    "name": "sonarr_get_series_by_ids",
+    "description": "Get detailed information for one or more TV series in Sonarr",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "seriesIds": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Array of series IDs to get details for"
+        }
+      },
+      "required": ["seriesIds"]
+    }
+  },
+  {
     "name": "sonarr_search",
     "description": "Search for TV series to add to Sonarr",
     "inputSchema": {
