@@ -674,7 +674,7 @@
   },
   {
     "name": "sonarr_get_series",
-    "description": "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+    "description": "Get TV series from Sonarr library with optional pagination, title filtering and sorting (sort=added for the newest additions). Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -689,6 +689,23 @@
         "search": {
           "type": "string",
           "description": "Optional case-insensitive title filter"
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "added",
+            "title",
+            "year"
+          ],
+          "description": "Optional sort applied before pagination: added (date added to the library), title or year. Omit to keep library order."
+        },
+        "order": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction (default: desc for added and year, asc for title). Ignored without sort."
         }
       },
       "required": []
@@ -907,7 +924,7 @@
   },
   {
     "name": "radarr_get_movies",
-    "description": "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+    "description": "Get movies from Radarr library with optional pagination, title filtering and sorting (sort=added for the newest additions). Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -922,6 +939,23 @@
         "search": {
           "type": "string",
           "description": "Optional case-insensitive title filter"
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "added",
+            "title",
+            "year"
+          ],
+          "description": "Optional sort applied before pagination: added (date added to the library), title or year. Omit to keep library order."
+        },
+        "order": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction (default: desc for added and year, asc for title). Ignored without sort."
         }
       },
       "required": []

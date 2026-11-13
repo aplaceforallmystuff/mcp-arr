@@ -451,7 +451,7 @@ if (clients.sonarr) {
     {
       name: "sonarr_get_series",
       annotations: READ_ONLY,
-      description: "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+      description: "Get TV series from Sonarr library with optional pagination, title filtering and sorting (sort=added for the newest additions). Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -466,6 +466,16 @@ if (clients.sonarr) {
           search: {
             type: "string",
             description: "Optional case-insensitive title filter",
+          },
+          sort: {
+            type: "string",
+            enum: ["added", "title", "year"],
+            description: "Optional sort applied before pagination: added (date added to the library), title or year. Omit to keep library order.",
+          },
+          order: {
+            type: "string",
+            enum: ["asc", "desc"],
+            description: "Sort direction (default: desc for added and year, asc for title). Ignored without sort.",
           },
         },
         required: [],
@@ -636,7 +646,7 @@ if (clients.radarr) {
     {
       name: "radarr_get_movies",
       annotations: READ_ONLY,
-      description: "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+      description: "Get movies from Radarr library with optional pagination, title filtering and sorting (sort=added for the newest additions). Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -651,6 +661,16 @@ if (clients.radarr) {
           search: {
             type: "string",
             description: "Optional case-insensitive title filter",
+          },
+          sort: {
+            type: "string",
+            enum: ["added", "title", "year"],
+            description: "Optional sort applied before pagination: added (date added to the library), title or year. Omit to keep library order.",
+          },
+          order: {
+            type: "string",
+            enum: ["asc", "desc"],
+            description: "Sort direction (default: desc for added and year, asc for title). Ignored without sort.",
           },
         },
         required: [],
@@ -2036,19 +2056,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const { limit = 25, offset = 0, search } = args as {
+        const { limit = 25, offset = 0, search, sort, order } = args as {
           limit?: number;
           offset?: number;
           search?: string;
+          sort?: string;
+          order?: string;
         };
         const normalizedLimit = Math.max(1, Math.min(limit, 100));
         const normalizedOffset = Math.max(0, offset);
         const filter = search?.trim().toLowerCase();
 
+        const librarySort = parseLibrarySort(sort, order);
+
         const allSeries = await clients.sonarr.getSeries();
-        const filteredSeries = filter
+        const filteredSeries = sortLibrary(filter
           ? allSeries.filter(s => s.title.toLowerCase().includes(filter))
-          : allSeries;
+          : allSeries, librarySort);
         const pagedSeries = filteredSeries.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
@@ -2064,10 +2088,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ? normalizedOffset + normalizedLimit
                 : null,
               search: search ?? null,
+              sort: librarySort?.key ?? null,
+              order: librarySort?.direction ?? null,
               series: pagedSeries.map(s => ({
                 id: s.id,
                 title: s.title,
                 year: s.year,
+                added: s.added,
                 status: s.status,
                 network: s.network,
                 seasons: s.statistics?.seasonCount,
@@ -2219,19 +2246,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Radarr handlers
       case "radarr_get_movies": {
         if (!clients.radarr) throw new Error("Radarr not configured");
-        const { limit = 25, offset = 0, search } = args as {
+        const { limit = 25, offset = 0, search, sort, order } = args as {
           limit?: number;
           offset?: number;
           search?: string;
+          sort?: string;
+          order?: string;
         };
         const normalizedLimit = Math.max(1, Math.min(limit, 100));
         const normalizedOffset = Math.max(0, offset);
         const filter = search?.trim().toLowerCase();
 
+        const librarySort = parseLibrarySort(sort, order);
+
         const allMovies = await clients.radarr.getMovies();
-        const filteredMovies = filter
+        const filteredMovies = sortLibrary(filter
           ? allMovies.filter(m => m.title.toLowerCase().includes(filter))
-          : allMovies;
+          : allMovies, librarySort);
         const pagedMovies = filteredMovies.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
@@ -2247,10 +2278,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ? normalizedOffset + normalizedLimit
                 : null,
               search: search ?? null,
+              sort: librarySort?.key ?? null,
+              order: librarySort?.direction ?? null,
               movies: pagedMovies.map(m => ({
                 id: m.id,
                 title: m.title,
                 year: m.year,
+                added: m.added,
                 status: m.status,
                 hasFile: m.hasFile,
                 sizeOnDisk: formatBytes(m.sizeOnDisk),
@@ -3090,6 +3124,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 }
 
 // Helper function to format bytes
+type LibrarySort = { key: "added" | "title" | "year"; direction: "asc" | "desc" };
+
+function parseLibrarySort(sort: unknown, order: unknown): LibrarySort | null {
+  if (sort === undefined) return null;
+  if (sort !== "added" && sort !== "title" && sort !== "year") {
+    throw new Error("sort must be one of: added, title, year");
+  }
+  if (order !== undefined && order !== "asc" && order !== "desc") {
+    throw new Error("order must be asc or desc");
+  }
+  return { key: sort, direction: order ?? (sort === "title" ? "asc" : "desc") };
+}
+
+function sortLibrary<T extends { added?: string; title: string; year?: number }>(
+  items: T[],
+  sort: LibrarySort | null,
+): T[] {
+  if (!sort) return items;
+  const sign = sort.direction === "asc" ? 1 : -1;
+  const value = (item: T): string | number =>
+    sort.key === "added" ? Date.parse(item.added ?? "") || 0
+      : sort.key === "year" ? item.year ?? 0
+      : item.title.toLowerCase();
+  return [...items].sort((a, b) => {
+    const x = value(a);
+    const y = value(b);
+    return x < y ? -sign : x > y ? sign : 0;
+  });
+}
+
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
   const k = 1024;

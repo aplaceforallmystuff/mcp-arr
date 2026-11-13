@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `sonarr_get_series` and `radarr_get_movies` take optional `sort` (`added`, `title`, `year`) and `order` (`asc`, `desc`), applied before pagination, and each row now includes its `added` date. `sort: "added", limit: 5` answers "what was added most recently" without paging through the whole library. Omitting `sort` keeps the existing order.
+
 ## [1.8.0] - 2026-11-12
 
 ### Added
