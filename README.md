@@ -306,7 +306,7 @@ Inspect existing episode and movie files with paginated summary or full MediaInf
 
 | Tool | Description |
 |------|-------------|
-| `sonarr_get_series` | List all TV series in your library |
+| `sonarr_get_series` | List TV series in your library (paginated; `sort` by added, title or year) |
 | `sonarr_search` | Search for TV series by name (returns tvdbId for adding) |
 | `sonarr_add_series` | Add a TV series to Sonarr (supports tags) |
 | `sonarr_get_root_folders` | Get available root folders for adding series |
@@ -322,7 +322,7 @@ Inspect existing episode and movie files with paginated summary or full MediaInf
 
 | Tool | Description |
 |------|-------------|
-| `radarr_get_movies` | List all movies in your library |
+| `radarr_get_movies` | List movies in your library (paginated; `sort` by added, title or year) |
 | `radarr_search` | Search for movies by name (returns tmdbId for adding) |
 | `radarr_add_movie` | Add a movie to Radarr (supports tags) |
 | `radarr_get_root_folders` | Get available root folders for adding movies |
