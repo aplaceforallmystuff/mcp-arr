@@ -139,8 +139,9 @@ for (const service of configuredServices) {
 // Tool annotations (MCP ToolAnnotations hints). Every tool declares one of
 // these so clients can tell lookups apart from tools that change state, e.g.
 // to auto-approve read-only calls. All tools talk to the *arr services or
-// TRaSH Guides, so openWorldHint is always true.
-const READ_ONLY: ToolAnnotations = { readOnlyHint: true, openWorldHint: true };
+// TRaSH Guides, so openWorldHint is always true. All four hints are set on
+// every tool, so no client has to fall back on the spec defaults.
+const READ_ONLY: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 // Queues an indexer search command; may grab and download releases.
 const TRIGGERS_SEARCH: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 // Each metadata refresh or indexer test submits a new command.
