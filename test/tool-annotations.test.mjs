@@ -26,7 +26,7 @@ const WRITE_TOOLS = [
   "prowlarr_test_indexers",
 ];
 
-test("every tool declares an explicit readOnlyHint", async () => {
+test("every tool declares all four annotation hints", async () => {
   const tools = await listTools();
   assert.ok(tools.length > 0, "expected tools to be listed");
 
@@ -39,13 +39,16 @@ test("every tool declares an explicit readOnlyHint", async () => {
       "boolean",
       `${tool.name} must declare annotations.readOnlyHint`,
     );
-    if (tool.annotations.readOnlyHint === false) {
-      assert.equal(typeof tool.annotations.idempotentHint, "boolean");
+    for (const hint of ["destructiveHint", "idempotentHint"]) {
       assert.equal(
-        typeof tool.annotations.destructiveHint,
+        typeof tool.annotations[hint],
         "boolean",
-        `${tool.name} changes state and must declare annotations.destructiveHint`,
+        `${tool.name} must declare annotations.${hint}`,
       );
+    }
+    if (tool.annotations.readOnlyHint === true) {
+      assert.equal(tool.annotations.destructiveHint, false, `${tool.name} is read-only`);
+      assert.equal(tool.annotations.idempotentHint, true, `${tool.name} is read-only`);
     }
   }
 
