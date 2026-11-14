@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- Validate tool arguments against each tool's input schema before dispatch. ID arguments are now declared as positive integers, so a string such as `../downloadclient/5` can no longer redirect a request to another endpoint.
+- Validate and URL-encode every ID used in a service request path or query string.
+- Redact configured API keys from error text returned to clients.
+- Stop at startup when a configured service URL is not a full `http://` or `https://` URL.
+
+### Documentation
+- Synchronize both registry tool catalogues with the updated input schemas.
+
 ## [1.8.0] - 2026-11-12
 
 ### Added

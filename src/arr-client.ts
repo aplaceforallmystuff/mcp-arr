@@ -5,6 +5,8 @@
  * the same REST API pattern with X-Api-Key header authentication.
  */
 
+import { pathId } from "./security.js";
+
 export type ArrService = 'sonarr' | 'radarr' | 'lidarr' | 'prowlarr';
 
 export interface ArrConfig {
@@ -620,7 +622,7 @@ export class ArrClient {
 
 export class SonarrClient extends ArrClient {
   async grabEpisodeRelease(episodeId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
-    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?episodeId=${episodeId}`);
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?episodeId=${pathId(episodeId)}`);
     const matches = releases.filter(r => r.indexerId === indexerId && r.guid === guid);
     if (matches.length !== 1) throw new ArrValidationError("Selected release is missing or ambiguous; inspect current results");
     const release = matches[0];
@@ -642,11 +644,11 @@ export class SonarrClient extends ArrClient {
   }
 
   async getEpisodeReleases(episodeId: number): Promise<SonarrRelease[]> {
-    return this['request']<SonarrRelease[]>(`/release?episodeId=${episodeId}`);
+    return this['request']<SonarrRelease[]>(`/release?episodeId=${pathId(episodeId)}`);
   }
 
   async getEpisodeFiles(seriesId: number): Promise<SonarrEpisodeFile[]> {
-    return this['request']<SonarrEpisodeFile[]>(`/episodefile?seriesId=${seriesId}`);
+    return this['request']<SonarrEpisodeFile[]>(`/episodefile?seriesId=${pathId(seriesId)}`);
   }
 
   constructor(config: ArrConfig) {
@@ -664,7 +666,7 @@ export class SonarrClient extends ArrClient {
    * Get a specific series
    */
   async getSeriesById(id: number): Promise<Series> {
-    return this['request']<Series>(`/series/${id}`);
+    return this['request']<Series>(`/series/${pathId(id)}`);
   }
 
   /**
@@ -708,9 +710,9 @@ export class SonarrClient extends ArrClient {
    * Get episodes for a series, optionally filtered by season
    */
   async getEpisodes(seriesId: number, seasonNumber?: number): Promise<Episode[]> {
-    let url = `/episode?seriesId=${seriesId}`;
+    let url = `/episode?seriesId=${pathId(seriesId)}`;
     if (seasonNumber !== undefined) {
-      url += `&seasonNumber=${seasonNumber}`;
+      url += `&seasonNumber=${encodeURIComponent(seasonNumber)}`;
     }
     return this['request']<Episode[]>(url);
   }
@@ -813,11 +815,11 @@ export class RadarrClient extends ArrClient {
 
   async getCommand(commandId: number): Promise<unknown> {
     if (!Number.isSafeInteger(commandId) || commandId <= 0) throw new ArrValidationError('Invalid commandId');
-    return this.request(`/command/${commandId}`);
+    return this.request(`/command/${pathId(commandId)}`);
   }
 
   async grabMovieRelease(movieId: number, indexerId: number, guid: string, acknowledgedRejections: string[] = []): Promise<unknown> {
-    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?movieId=${movieId}`);
+    const releases = await this.request<Array<{ indexerId?: number; guid?: string; downloadAllowed?: boolean; rejected?: boolean; rejections?: string[] }>>(`/release?movieId=${pathId(movieId)}`);
     const matches = releases.filter(r => r.indexerId === indexerId && r.guid === guid);
     if (matches.length !== 1) throw new ArrValidationError("Selected release is missing or ambiguous; inspect current results");
     const release = matches[0];
@@ -836,11 +838,11 @@ export class RadarrClient extends ArrClient {
   }
 
   async getMovieReleases(movieId: number): Promise<RadarrRelease[]> {
-    return this['request']<RadarrRelease[]>(`/release?movieId=${movieId}`);
+    return this['request']<RadarrRelease[]>(`/release?movieId=${pathId(movieId)}`);
   }
 
   async getMovieFiles(movieId: number): Promise<RadarrMovieFile[]> {
-    return this['request']<RadarrMovieFile[]>(`/moviefile?movieId=${movieId}`);
+    return this['request']<RadarrMovieFile[]>(`/moviefile?movieId=${pathId(movieId)}`);
   }
 
   constructor(config: ArrConfig) {
@@ -858,7 +860,7 @@ export class RadarrClient extends ArrClient {
    * Get a specific movie
    */
   async getMovieById(id: number): Promise<Movie> {
-    return this['request']<Movie>(`/movie/${id}`);
+    return this['request']<Movie>(`/movie/${pathId(id)}`);
   }
 
   /**
@@ -914,7 +916,7 @@ export class RadarrClient extends ArrClient {
    * Update a movie (PUT). Used to change qualityProfileId, monitored, tags, etc.
    */
   async updateMovie(movie: Movie): Promise<Movie> {
-    return this['request']<Movie>(`/movie/${movie.id}`, {
+    return this['request']<Movie>(`/movie/${pathId(movie.id)}`, {
       method: 'PUT',
       body: JSON.stringify(movie),
     });
@@ -928,7 +930,7 @@ export class RadarrClient extends ArrClient {
     if (options.removeFromClient) params.append('removeFromClient', 'true');
     if (options.blocklist) params.append('blocklist', 'true');
     const query = params.toString() ? `?${params.toString()}` : '';
-    await this['request']<void>(`/queue/${queueId}${query}`, {
+    await this['request']<void>(`/queue/${pathId(queueId)}${query}`, {
       method: 'DELETE',
     });
   }
@@ -964,7 +966,7 @@ export class LidarrClient extends ArrClient {
    * Get a specific artist
    */
   async getArtistById(id: number): Promise<Artist> {
-    return this['request']<Artist>(`/artist/${id}`);
+    return this['request']<Artist>(`/artist/${pathId(id)}`);
   }
 
   /**
@@ -994,7 +996,7 @@ export class LidarrClient extends ArrClient {
    * Get all albums, optionally filtered by artist
    */
   async getAlbums(artistId?: number): Promise<Album[]> {
-    const url = artistId ? `/album?artistId=${artistId}` : '/album';
+    const url = artistId ? `/album?artistId=${pathId(artistId)}` : '/album';
     return this['request']<Album[]>(url);
   }
 
@@ -1002,7 +1004,7 @@ export class LidarrClient extends ArrClient {
    * Get a specific album
    */
   async getAlbumById(id: number): Promise<Album> {
-    return this['request']<Album>(`/album/${id}`);
+    return this['request']<Album>(`/album/${pathId(id)}`);
   }
 
   /**
@@ -1089,7 +1091,7 @@ export class ProwlarrClient extends ArrClient {
    * Test a specific indexer
    */
   async testIndexer(indexerId: number): Promise<{ id: number; isValid: boolean; validationFailures: Array<{ propertyName: string; errorMessage: string }> }> {
-    return this['request']<{ id: number; isValid: boolean; validationFailures: Array<{ propertyName: string; errorMessage: string }> }>(`/indexer/${indexerId}/test`, { method: 'POST' });
+    return this['request']<{ id: number; isValid: boolean; validationFailures: Array<{ propertyName: string; errorMessage: string }> }>(`/indexer/${pathId(indexerId)}/test`, { method: 'POST' });
   }
 
   /**
