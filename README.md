@@ -437,6 +437,12 @@ The *arr application is not running or the URL is incorrect. Verify:
 ### "Sonarr/Radarr/etc not configured"
 You tried to use a tool for a service that isn't configured. Add the corresponding URL and API_KEY environment variables.
 
+### "SONARR_URL must be a full http:// or https:// URL"
+The server stops at startup when a configured service URL has no `http://` or `https://` scheme, for example `localhost:8989`. Use the full URL, such as `http://localhost:8989`.
+
+### "Invalid arguments for ..."
+Tool arguments are checked against the tool's input schema before any request is sent. IDs must be positive integers, and booleans, enums and limits must match the schema.
+
 ## Need help building or securing MCP servers?
 
 I build and maintain MCP servers like this one, and I review AI and agent setups for security. If your team needs a custom server, an integration, or a security review of one you already run, see [jimchristian.net/work](https://jimchristian.net/work/) or book a [discovery session](https://jimchristian.net/discovery/).
