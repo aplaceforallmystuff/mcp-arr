@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-15
+
 ### Security
+- Fixes [GHSA-78w2-pqhr-q7p7](https://github.com/aplaceforallmystuff/mcp-arr/security/advisories/GHSA-78w2-pqhr-q7p7) (affects 1.8.0 and earlier). Reported, with the fix, by Henrik Tilly ([@htilly](https://github.com/htilly)).
 - Validate tool arguments against each tool's input schema before dispatch. ID arguments are now declared as positive integers, so a string such as `../downloadclient/5` can no longer redirect a request to another endpoint.
 - Validate and URL-encode every ID used in a service request path or query string.
 - Redact configured API keys from error text returned to clients.
