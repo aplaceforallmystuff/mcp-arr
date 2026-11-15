@@ -71,6 +71,13 @@
           "format": "string",
           "isSecret": true,
           "name": "PROWLARR_API_KEY"
+        },
+        {
+          "description": "Set to true to hide and refuse tools that change state",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "ARR_READ_ONLY"
         }
       ]
     }

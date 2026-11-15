@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Optional `sortBy` (`dateAdded` or `sizeOnDisk`) and `sortDir` (`asc` or `desc`) for `sonarr_get_series` and `radarr_get_movies`. Sorting applies after the optional `search` filter and before pagination, so `limit` and `offset` page through the sorted order. Without `sortBy`, order and response shape are unchanged.
+- `ARR_READ_ONLY=true` hides tools that change state from `tools/list` and refuses calls to them. Write tools are identified by their `readOnlyHint` annotation, so newly annotated tools are covered automatically.
 
 ### CI
 - The release workflow now updates the MCP Registry listing (`server.json`) after npm publishes, signing in with GitHub OIDC so no token is stored. Re-runs skip a version that's already listed.

@@ -203,6 +203,8 @@ Add to `~/.claude.json`:
 
 **TRaSH-only mode**: if you don’t configure any *arr services, the server still starts and exposes the TRaSH Guides reference tools plus generic `search` and `fetch`.
 
+**Read-only mode**: set `ARR_READ_ONLY=true` to hide every tool that changes state (searches, refreshes, adds, updates, deletes, release grabs and manual imports) from `tools/list` and refuse calls to them. A tool counts as read-only when its `readOnlyHint` annotation is `true`.
+
 ## ChatGPT / Remote MCP
 
 To use `mcp-arr` with ChatGPT, run the server in remote HTTP mode on a reachable host and connect ChatGPT to the `/mcp` endpoint.
