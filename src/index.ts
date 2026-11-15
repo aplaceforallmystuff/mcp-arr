@@ -474,10 +474,20 @@ if (clients.sonarr) {
     {
       name: "sonarr_get_series",
       annotations: READ_ONLY,
-      description: "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+      description: "Get TV series from Sonarr library with optional pagination, title filtering and sorting. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages. Optional sortBy (dateAdded or sizeOnDisk) is applied before pagination.",
       inputSchema: {
         type: "object" as const,
         properties: {
+          sortBy: {
+            type: "string",
+            enum: ["dateAdded", "sizeOnDisk"],
+            description: "Optional sort applied before pagination. Omit to keep the library order.",
+          },
+          sortDir: {
+            type: "string",
+            enum: ["asc", "desc"],
+            description: "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy.",
+          },
           limit: {
             type: "integer",
             minimum: 0,
@@ -669,10 +679,20 @@ if (clients.radarr) {
     {
       name: "radarr_get_movies",
       annotations: READ_ONLY,
-      description: "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+      description: "Get movies from Radarr library with optional pagination, title filtering and sorting. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages. Optional sortBy (dateAdded or sizeOnDisk) is applied before pagination.",
       inputSchema: {
         type: "object" as const,
         properties: {
+          sortBy: {
+            type: "string",
+            enum: ["dateAdded", "sizeOnDisk"],
+            description: "Optional sort applied before pagination. Omit to keep the library order.",
+          },
+          sortDir: {
+            type: "string",
+            enum: ["asc", "desc"],
+            description: "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy.",
+          },
           limit: {
             type: "integer",
             minimum: 0,
@@ -1335,6 +1355,31 @@ function textError(message: string) {
     content: [{ type: "text" as const, text: message }],
     isError: true,
   };
+}
+
+type LibrarySort = { sortBy: "dateAdded" | "sizeOnDisk"; sortDir: "asc" | "desc" };
+
+// Validates optional sortBy/sortDir. Returns undefined when no sort was requested.
+function parseLibrarySort(args: { sortBy?: unknown; sortDir?: unknown }): LibrarySort | undefined | string {
+  const { sortBy, sortDir } = args;
+  if (sortBy === undefined) {
+    return sortDir === undefined ? undefined : "sortDir requires sortBy";
+  }
+  if (sortBy !== "dateAdded" && sortBy !== "sizeOnDisk") {
+    return "sortBy must be dateAdded or sizeOnDisk";
+  }
+  if (sortDir !== undefined && sortDir !== "asc" && sortDir !== "desc") {
+    return "sortDir must be asc or desc";
+  }
+  return { sortBy, sortDir: sortDir ?? (sortBy === "dateAdded" ? "asc" : "desc") };
+}
+
+// Returns a sorted copy; the stable sort keeps library order for equal keys.
+function sortLibrary<T>(items: T[], sort: LibrarySort, added: (item: T) => string | undefined, size: (item: T) => number | undefined): T[] {
+  const sign = sort.sortDir === "asc" ? 1 : -1;
+  return [...items].sort((a, b) => sign * (sort.sortBy === "dateAdded"
+    ? (Date.parse(added(a) ?? "") || 0) - (Date.parse(added(b) ?? "") || 0)
+    : (size(a) ?? 0) - (size(b) ?? 0)));
 }
 
 async function runUnifiedSearch(query: string): Promise<SearchEntry[]> {
@@ -2093,11 +2138,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "sonarr_get_series": {
         if (!clients.sonarr) throw new Error("Sonarr not configured");
-        const { limit = 25, offset = 0, search } = args as {
+        const { limit = 25, offset = 0, search, sortBy, sortDir } = args as {
           limit?: number;
           offset?: number;
           search?: string;
+          sortBy?: unknown;
+          sortDir?: unknown;
         };
+        const sort = parseLibrarySort({ sortBy, sortDir });
+        if (typeof sort === "string") return textError(sort);
         const normalizedLimit = Math.max(1, Math.min(limit, 100));
         const normalizedOffset = Math.max(0, offset);
         const filter = search?.trim().toLowerCase();
@@ -2106,7 +2155,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const filteredSeries = filter
           ? allSeries.filter(s => s.title.toLowerCase().includes(filter))
           : allSeries;
-        const pagedSeries = filteredSeries.slice(normalizedOffset, normalizedOffset + normalizedLimit);
+        // Sort before pagination so offset/limit page through the sorted order.
+        const sortedSeries = sort
+          ? sortLibrary(filteredSeries, sort, s => s.added, s => s.statistics?.sizeOnDisk)
+          : filteredSeries;
+        const pagedSeries = sortedSeries.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
             type: "text",
@@ -2121,6 +2174,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ? normalizedOffset + normalizedLimit
                 : null,
               search: search ?? null,
+              ...sort,
               series: pagedSeries.map(s => ({
                 id: s.id,
                 title: s.title,
@@ -2276,11 +2330,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Radarr handlers
       case "radarr_get_movies": {
         if (!clients.radarr) throw new Error("Radarr not configured");
-        const { limit = 25, offset = 0, search } = args as {
+        const { limit = 25, offset = 0, search, sortBy, sortDir } = args as {
           limit?: number;
           offset?: number;
           search?: string;
+          sortBy?: unknown;
+          sortDir?: unknown;
         };
+        const sort = parseLibrarySort({ sortBy, sortDir });
+        if (typeof sort === "string") return textError(sort);
         const normalizedLimit = Math.max(1, Math.min(limit, 100));
         const normalizedOffset = Math.max(0, offset);
         const filter = search?.trim().toLowerCase();
@@ -2289,7 +2347,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const filteredMovies = filter
           ? allMovies.filter(m => m.title.toLowerCase().includes(filter))
           : allMovies;
-        const pagedMovies = filteredMovies.slice(normalizedOffset, normalizedOffset + normalizedLimit);
+        // Sort before pagination so offset/limit page through the sorted order.
+        const sortedMovies = sort
+          ? sortLibrary(filteredMovies, sort, m => m.added, m => m.sizeOnDisk)
+          : filteredMovies;
+        const pagedMovies = sortedMovies.slice(normalizedOffset, normalizedOffset + normalizedLimit);
         return {
           content: [{
             type: "text",
@@ -2304,6 +2366,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ? normalizedOffset + normalizedLimit
                 : null,
               search: search ?? null,
+              ...sort,
               movies: pagedMovies.map(m => ({
                 id: m.id,
                 title: m.title,
