@@ -694,10 +694,26 @@
   },
   {
     "name": "sonarr_get_series",
-    "description": "Get TV series from Sonarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+    "description": "Get TV series from Sonarr library with optional pagination, title filtering and sorting. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages. Optional sortBy (dateAdded or sizeOnDisk) is applied before pagination.",
     "inputSchema": {
       "type": "object",
       "properties": {
+        "sortBy": {
+          "type": "string",
+          "enum": [
+            "dateAdded",
+            "sizeOnDisk"
+          ],
+          "description": "Optional sort applied before pagination. Omit to keep the library order."
+        },
+        "sortDir": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy."
+        },
         "limit": {
           "type": "integer",
           "minimum": 0,
@@ -939,10 +955,26 @@
   },
   {
     "name": "radarr_get_movies",
-    "description": "Get movies from Radarr library with optional pagination and title filtering. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages.",
+    "description": "Get movies from Radarr library with optional pagination, title filtering and sorting. Defaults to limit=25 to avoid very large responses. Use offset to fetch additional pages. Optional sortBy (dateAdded or sizeOnDisk) is applied before pagination.",
     "inputSchema": {
       "type": "object",
       "properties": {
+        "sortBy": {
+          "type": "string",
+          "enum": [
+            "dateAdded",
+            "sizeOnDisk"
+          ],
+          "description": "Optional sort applied before pagination. Omit to keep the library order."
+        },
+        "sortDir": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy."
+        },
         "limit": {
           "type": "integer",
           "minimum": 0,
