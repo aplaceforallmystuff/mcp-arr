@@ -34,6 +34,12 @@ import {
   ArrValidationError,
 } from "./arr-client.js";
 import { trashClient, TrashService } from "./trash-client.js";
+import {
+  createRedactor,
+  ToolArgumentError,
+  validateServiceUrl,
+  validateToolArgs,
+} from "./security.js";
 
 // Read from package.json rather than hardcoding, so the version reported to
 // clients can never drift from the released version. package.json sits at the
@@ -109,6 +115,23 @@ const services: ServiceConfig[] = [
 
 // Check which services are configured
 const configuredServices = services.filter(s => s.url && s.apiKey);
+
+// Stop on a malformed service URL before any request can echo it with a key.
+for (const service of configuredServices) {
+  try {
+    validateServiceUrl(`${service.name.toUpperCase()}_URL`, service.url!);
+  } catch (error) {
+    console.error(`[mcp-arr] ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+}
+
+// Removes configured API keys from error text returned to clients.
+const redact = createRedactor(configuredServices.map(s => s.apiKey));
+
+function errorText(error: unknown): string {
+  return redact(error instanceof Error ? error.message : String(error));
+}
 
 // Initialize clients for configured services
 const clients: {
@@ -291,9 +314,9 @@ if (clients.sonarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        seriesId: { type: "number", description: "Sonarr series ID" },
-        limit: { type: "number", description: "Maximum records (default 25, max 100)" },
-        offset: { type: "number", description: "Records to skip (default 0)" },
+        seriesId: { type: "integer", minimum: 1, description: "Sonarr series ID" },
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Maximum records (default 25, max 100)" },
+        offset: { type: "integer", minimum: 0, description: "Records to skip (default 0)" },
         fields: { type: "string", enum: ["summary", "full"], description: "Response detail (default summary)" },
       },
       required: ["seriesId"],
@@ -309,9 +332,9 @@ if (clients.radarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        movieId: { type: "number", description: "Radarr movie ID" },
-        limit: { type: "number", description: "Maximum records (default 25, max 100)" },
-        offset: { type: "number", description: "Records to skip (default 0)" },
+        movieId: { type: "integer", minimum: 1, description: "Radarr movie ID" },
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Maximum records (default 25, max 100)" },
+        offset: { type: "integer", minimum: 0, description: "Records to skip (default 0)" },
         fields: { type: "string", enum: ["summary", "full"] },
       },
       required: ["movieId"],
@@ -327,9 +350,9 @@ if (clients.sonarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        episodeId: { type: "number", description: "Sonarr episode ID (not episode-file ID)" },
-        limit: { type: "number", description: "Maximum results (default 25, max 100)" },
-        offset: { type: "number", description: "Results to skip (default 0)" },
+        episodeId: { type: "integer", minimum: 1, description: "Sonarr episode ID (not episode-file ID)" },
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Maximum results (default 25, max 100)" },
+        offset: { type: "integer", minimum: 0, description: "Results to skip (default 0)" },
       },
       required: ["episodeId"],
     },
@@ -344,9 +367,9 @@ if (clients.radarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        movieId: { type: "number", description: "Radarr movie ID" },
-        limit: { type: "number", description: "Maximum results (default 25, max 100)" },
-        offset: { type: "number", description: "Results to skip (default 0)" },
+        movieId: { type: "integer", minimum: 1, description: "Radarr movie ID" },
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Maximum results (default 25, max 100)" },
+        offset: { type: "integer", minimum: 0, description: "Results to skip (default 0)" },
       },
       required: ["movieId"],
     },
@@ -361,8 +384,8 @@ if (clients.sonarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        episodeId: { type: "number", description: "Sonarr episode ID" },
-        indexerId: { type: "number", description: "Indexer ID returned by sonarr_get_episode_releases" },
+        episodeId: { type: "integer", minimum: 1, description: "Sonarr episode ID" },
+        indexerId: { type: "integer", minimum: 1, description: "Indexer ID returned by sonarr_get_episode_releases" },
         guid: { type: "string", description: "Exact release GUID returned by sonarr_get_episode_releases" },
         acknowledgedRejections: { type: "array", items: { type: "string" }, description: "Exact current cutoff/not-an-upgrade reasons explicitly approved for override" },
         confirmed: { type: "boolean", description: "True only after the user approves grabbing this exact release" },
@@ -380,8 +403,8 @@ if (clients.radarr) {
     inputSchema: {
       type: "object" as const,
       properties: {
-        movieId: { type: "number", description: "Radarr movie ID" },
-        indexerId: { type: "number", description: "Indexer ID returned by radarr_get_movie_releases" },
+        movieId: { type: "integer", minimum: 1, description: "Radarr movie ID" },
+        indexerId: { type: "integer", minimum: 1, description: "Indexer ID returned by radarr_get_movie_releases" },
         guid: { type: "string", description: "Exact release GUID returned by radarr_get_movie_releases" },
         acknowledgedRejections: { type: "array", items: { type: "string" }, description: "Exact current cutoff/not-an-upgrade reasons explicitly approved for override" },
         confirmed: { type: "boolean", description: "True only after the user approves grabbing this exact release" },
@@ -466,11 +489,13 @@ if (clients.sonarr) {
             description: "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy.",
           },
           limit: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Maximum number of series to return (default: 25, max: 100)",
           },
           offset: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Number of series to skip before returning results (default: 0)",
           },
           search: {
@@ -504,11 +529,13 @@ if (clients.sonarr) {
         type: "object" as const,
         properties: {
           limit: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Maximum number of queue items to return (default: 25, max: 100)",
           },
           offset: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Number of queue items to skip before returning results (default: 0)",
           },
         },
@@ -538,11 +565,13 @@ if (clients.sonarr) {
         type: "object" as const,
         properties: {
           seriesId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Series ID to get episodes for",
           },
           seasonNumber: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Optional: filter to a specific season",
           },
         },
@@ -557,7 +586,8 @@ if (clients.sonarr) {
         type: "object" as const,
         properties: {
           seriesId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Series ID to search for missing episodes",
           },
         },
@@ -574,7 +604,7 @@ if (clients.sonarr) {
           episodeIds: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Episode ID(s) to search for",
           },
         },
@@ -589,7 +619,8 @@ if (clients.sonarr) {
         type: "object" as const,
         properties: {
           seriesId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Series ID to refresh",
           },
         },
@@ -604,7 +635,8 @@ if (clients.sonarr) {
         type: "object" as const,
         properties: {
           tvdbId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "TVDB ID from sonarr_search results",
           },
           title: {
@@ -612,7 +644,8 @@ if (clients.sonarr) {
             description: "Series title",
           },
           qualityProfileId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Quality profile ID from sonarr_get_quality_profiles",
           },
           rootFolderPath: {
@@ -630,7 +663,7 @@ if (clients.sonarr) {
           tags: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Array of tag IDs from sonarr_get_tags (optional)",
           },
         },
@@ -661,11 +694,13 @@ if (clients.radarr) {
             description: "Sort direction (default: asc for dateAdded, desc for sizeOnDisk). Requires sortBy.",
           },
           limit: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Maximum number of movies to return (default: 25, max: 100)",
           },
           offset: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Number of movies to skip before returning results (default: 0)",
           },
           search: {
@@ -699,11 +734,13 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           limit: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Maximum number of queue items to return (default: 25, max: 100)",
           },
           offset: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Number of queue items to skip before returning results (default: 0)",
           },
         },
@@ -733,7 +770,8 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           movieId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Movie ID to search for",
           },
         },
@@ -748,7 +786,8 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           movieId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Movie ID to refresh",
           },
         },
@@ -763,7 +802,8 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           tmdbId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "TMDB ID from radarr_search results",
           },
           title: {
@@ -771,7 +811,8 @@ if (clients.radarr) {
             description: "Movie title",
           },
           qualityProfileId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Quality profile ID from radarr_get_quality_profiles",
           },
           rootFolderPath: {
@@ -790,7 +831,7 @@ if (clients.radarr) {
           tags: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Array of tag IDs from radarr_get_tags (optional)",
           },
         },
@@ -805,11 +846,13 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           movieId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Movie ID to update",
           },
           qualityProfileId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "New quality profile ID (from radarr_get_quality_profiles)",
           },
           monitored: {
@@ -824,7 +867,7 @@ if (clients.radarr) {
           tags: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Replace all tags with this list of tag IDs",
           },
           path: {
@@ -843,7 +886,8 @@ if (clients.radarr) {
         type: "object" as const,
         properties: {
           queueId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Queue item ID (from radarr_get_queue)",
           },
           removeFromClient: {
@@ -868,7 +912,7 @@ if (clients.radarr) {
           movieIds: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Array of movie IDs to search for",
           },
         },
@@ -914,11 +958,13 @@ if (clients.lidarr) {
         type: "object" as const,
         properties: {
           limit: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Maximum number of queue items to return (default: 25, max: 100)",
           },
           offset: {
-            type: "number",
+            type: "integer",
+            minimum: 0,
             description: "Number of queue items to skip before returning results (default: 0)",
           },
         },
@@ -933,7 +979,8 @@ if (clients.lidarr) {
         type: "object" as const,
         properties: {
           artistId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Artist ID to get albums for",
           },
         },
@@ -948,7 +995,8 @@ if (clients.lidarr) {
         type: "object" as const,
         properties: {
           albumId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Album ID to search for",
           },
         },
@@ -963,7 +1011,8 @@ if (clients.lidarr) {
         type: "object" as const,
         properties: {
           artistId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Artist ID to search missing albums for",
           },
         },
@@ -1001,11 +1050,13 @@ if (clients.lidarr) {
             description: "Artist name",
           },
           qualityProfileId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Quality profile ID from lidarr_get_quality_profiles",
           },
           metadataProfileId: {
-            type: "number",
+            type: "integer",
+            minimum: 1,
             description: "Metadata profile ID from lidarr_get_metadata_profiles",
           },
           rootFolderPath: {
@@ -1019,7 +1070,7 @@ if (clients.lidarr) {
           tags: {
             type: "array",
             maxItems: 1000,
-            items: { type: "number" },
+            items: { type: "integer", minimum: 1 },
             description: "Array of tag IDs from lidarr_get_tags (optional)",
           },
         },
@@ -1219,7 +1270,8 @@ TOOLS.push(
           description: "Which service",
         },
         profileId: {
-          type: "number",
+          type: "integer",
+          minimum: 1,
           description: "Your quality profile ID to compare",
         },
         trashProfile: {
@@ -1558,6 +1610,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   try {
+    const tool = TOOLS.find(t => t.name === name);
+    if (tool) {
+      validateToolArgs(tool, (args ?? {}) as Record<string, unknown>);
+    }
+
     switch (name) {
       case "search": {
         const query = (args as { query: string }).query;
@@ -1589,7 +1646,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             statuses[service.name] = {
               configured: true,
               connected: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorText(error),
             };
           }
         }
@@ -2768,7 +2825,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const sonarrResults = await clients.sonarr.searchSeries(term);
             results.sonarr = { count: sonarrResults.length, results: sonarrResults.slice(0, 5) };
           } catch (e) {
-            results.sonarr = { error: e instanceof Error ? e.message : String(e) };
+            results.sonarr = { error: errorText(e) };
           }
         }
 
@@ -2777,7 +2834,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const radarrResults = await clients.radarr.searchMovies(term);
             results.radarr = { count: radarrResults.length, results: radarrResults.slice(0, 5) };
           } catch (e) {
-            results.radarr = { error: e instanceof Error ? e.message : String(e) };
+            results.radarr = { error: errorText(e) };
           }
         }
 
@@ -2786,7 +2843,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const lidarrResults = await clients.lidarr.searchArtists(term);
             results.lidarr = { count: lidarrResults.length, results: lidarrResults.slice(0, 5) };
           } catch (e) {
-            results.lidarr = { error: e instanceof Error ? e.message : String(e) };
+            results.lidarr = { error: errorText(e) };
           }
         }
 
@@ -3140,9 +3197,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const rawMessage = error instanceof Error ? error.message : String(error);
+    const rawMessage = errorText(error);
     const newTools = ["radarr_get_manual_import_candidates", "radarr_manual_import", "radarr_get_command", "sonarr_grab_release", "radarr_grab_release", "sonarr_get_episode_files", "radarr_get_movie_files", "sonarr_get_episode_releases", "radarr_get_movie_releases"];
-    const errorMessage = newTools.includes(name) && !(error instanceof ArrValidationError)
+    const errorMessage = newTools.includes(name) && !(error instanceof ArrValidationError || error instanceof ToolArgumentError)
       ? 'Service request failed; check the service logs and current state before retrying' : rawMessage;
     return {
       content: [{ type: "text", text: `Error: ${errorMessage}` }],

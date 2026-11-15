@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - Optional `sortBy` (`dateAdded` or `sizeOnDisk`) and `sortDir` (`asc` or `desc`) for `sonarr_get_series` and `radarr_get_movies`. Sorting applies after the optional `search` filter and before pagination, so `limit` and `offset` page through the sorted order. Without `sortBy`, order and response shape are unchanged.
 
+## [1.8.1] - 2026-11-15
+
+### Security
+- Fixes [GHSA-78w2-pqhr-q7p7](https://github.com/aplaceforallmystuff/mcp-arr/security/advisories/GHSA-78w2-pqhr-q7p7) (affects 1.8.0 and earlier). Reported, with the fix, by Henrik Tilly ([@htilly](https://github.com/htilly)).
+- Validate tool arguments against each tool's input schema before dispatch. ID arguments are now declared as positive integers, so a string such as `../downloadclient/5` can no longer redirect a request to another endpoint.
+- Validate and URL-encode every ID used in a service request path or query string.
+- Redact configured API keys from error text returned to clients.
+- Stop at startup when a configured service URL is not a full `http://` or `https://` URL.
+
+### Documentation
+- Synchronize both registry tool catalogues with the updated input schemas.
+
 ## [1.8.0] - 2026-11-12
 
 ### Added
