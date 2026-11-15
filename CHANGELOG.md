@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### CI
+- The release workflow now updates the MCP Registry listing (`server.json`) after npm publishes, signing in with GitHub OIDC so no token is stored. Re-runs skip a version that's already listed.
+
 ## [1.8.1] - 2026-11-15
 
 ### Security

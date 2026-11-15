@@ -1,17 +1,20 @@
 name: Release
 
-# Builds the Docker image (-> GHCR), publishes to npm and creates the GitHub
-# Release on every version tag.
+# Builds the Docker image (-> GHCR), publishes to npm, updates the MCP Registry
+# listing and creates the GitHub Release on every version tag.
 #
 # npm publishing uses npm trusted publishing (OIDC), so the project still holds
 # no long-lived npm token. The npm package settings must list this repository and
-# this workflow file (release.yml) as a trusted publisher. Everything else uses
+# this workflow file (release.yml) as a trusted publisher. The MCP Registry
+# listing (server.json) is published with GitHub OIDC, so it needs no token
+# either. Everything else uses
 # the per-run, auto-expiring GITHUB_TOKEN — there is nothing to store or rotate.
 #
 # Release flow:
 #   1. bump package.json + CHANGELOG, commit
 #   2. git tag vX.Y.Z && git push --tags, or run this workflow with the version
-#      (this workflow builds the image, publishes to npm and creates the release)
+#      (this workflow builds the image, publishes to npm, updates the MCP
+#      Registry and creates the release)
 
 on:
   push:
@@ -202,6 +205,60 @@ jobs:
             exit 0
           fi
           npm publish
+
+  # ── 4b. MCP Registry (GitHub OIDC) ──────────────────────────────────────────
+  # Runs after npm, because the registry checks that the npm package exists
+  # and that its mcpName matches server.json.
+  mcp-registry:
+    needs: [prepare, npm-publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # OIDC for mcp-publisher login github-oidc
+    env:
+      MCP_PUBLISHER_VERSION: 1.8.9
+      MCP_PUBLISHER_SHA256: 4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Check server.json version
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          SERVER_VERSION="$(node -p "require('./server.json').version")"
+          if [ "$SERVER_VERSION" != "$VERSION" ]; then
+            echo "::error::server.json version ($SERVER_VERSION) != release version ($VERSION). Run npm run sync-server-json."
+            exit 1
+          fi
+
+      - name: Install mcp-publisher (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          curl -sSfL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+          rm mcp-publisher.tar.gz
+
+      # Skip quietly if this version is already listed (e.g. a re-run).
+      - name: Publish to the MCP Registry
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          NAME="$(node -p "require('./server.json').name")"
+          LISTED="$(curl -sSf "https://registry.modelcontextprotocol.io/v0/servers?search=${NAME}&version=${VERSION}" \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const n=process.argv[1],v=process.argv[2];console.log((JSON.parse(d).servers||[]).some(s=>s.server.name===n&&s.server.version===v)?"yes":"no")})' "$NAME" "$VERSION")"
+          if [ "$LISTED" = "yes" ]; then
+            echo "${NAME}@${VERSION} is already in the MCP Registry; nothing to publish."
+            exit 0
+          fi
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
 
   # ── 5. GitHub Release ───────────────────────────────────────────────────────
   github-release:
