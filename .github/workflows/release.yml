@@ -244,6 +244,25 @@ jobs:
           tar xzf mcp-publisher.tar.gz mcp-publisher
           rm mcp-publisher.tar.gz
 
+      # npm can take a few minutes to serve a new version, and the registry
+      # rejects a server whose npm version it can't see yet.
+      - name: Wait for the version to appear on npm
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          NAME="$(node -p "require('./package.json').name")"
+          for i in $(seq 1 30); do
+            if curl -sSf "https://registry.npmjs.org/${NAME}/${VERSION}" >/dev/null 2>&1; then
+              echo "${NAME}@${VERSION} is on npm."
+              exit 0
+            fi
+            echo "Waiting for ${NAME}@${VERSION} on npm (${i}/30)..."
+            sleep 20
+          done
+          echo "::error::${NAME}@${VERSION} did not appear on npm within 10 minutes."
+          exit 1
+
       # Skip quietly if this version is already listed (e.g. a re-run).
       - name: Publish to the MCP Registry
         env:
